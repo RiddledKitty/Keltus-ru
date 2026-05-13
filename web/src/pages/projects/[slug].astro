@@ -1,0 +1,330 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { listProjects, getProject, assetUrl, sanitizeRichHtml } from '../../lib/directus';
+
+export async function getStaticPaths() {
+  const all = await listProjects();
+  return all.map(p => ({ params: { slug: p.slug } }));
+}
+
+const { slug } = Astro.params;
+const p = await getProject(slug!);
+if (!p) {
+  return new Response('Не найдено', { status: 404 });
+}
+
+const cover    = p.cover_image ? assetUrl(p.cover_image, { width: 960, format: 'webp', quality: 85 }) : '';
+const coverSet = p.cover_image
+  ? [640, 960, 1280, 1600]
+      .map(w => `${assetUrl(p.cover_image, { width: w, format: 'webp', quality: 85 })} ${w}w`)
+      .join(', ')
+  : '';
+const gallery  = (p.gallery ?? []).map(uid => ({
+  src: assetUrl(uid, { width: 800, format: 'webp', quality: 80 }),
+  srcset: [480, 800, 1200].map(w => `${assetUrl(uid, { width: w, format: 'webp', quality: 80 })} ${w}w`).join(', '),
+}));
+const platforms = (p.apps ?? []);
+const platformLabel = (pf: string) =>
+  pf === 'ios' ? 'iOS' : pf === 'android' ? 'Android' : pf === 'web' ? 'Веб' : 'Десктоп';
+---
+
+<BaseLayout seo={{
+  title: `${p.name} — Keltus`,
+  description: p.tagline ?? `${p.name} — проект Keltus.`,
+  ogImage: cover || undefined,
+}}>
+
+  <article class="kel-project">
+    <header class="kel-project__head">
+      <div class="kel-container">
+        <a href="/projects/" class="kel-project__back">← Все проекты</a>
+        <span class="kel-eyebrow">Кейс</span>
+        <h1>{p.name}</h1>
+        {p.tagline && <p class="kel-project__lede">{p.tagline}</p>}
+        {(p.highlights?.length ?? 0) > 0 && (
+          <ul class="kel-project__chips">
+            {p.highlights!.map(h => <li>{h}</li>)}
+          </ul>
+        )}
+        {(p.live_url || p.github_url) && (
+          <div class="kel-project__links">
+            {p.live_url && <a href={p.live_url} rel="noopener" target="_blank" class="kel-btn kel-btn--primary">Открыть сайт →</a>}
+            {p.github_url && <a href={p.github_url} rel="noopener" target="_blank" class="kel-btn">Посмотреть на GitHub</a>}
+          </div>
+        )}
+      </div>
+    </header>
+
+    {cover && (
+      <div class="kel-project__cover">
+        <img
+          src={cover}
+          srcset={coverSet}
+          sizes="(min-width: 1180px) 1180px, 100vw"
+          alt={`${p.name} cover`}
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+        />
+      </div>
+    )}
+
+    <div class="kel-project__body kel-container">
+      <aside class="kel-project__meta">
+        <div class="kel-project__meta-card">
+          <h3>Стек</h3>
+          {p.frontend_stack && p.frontend_stack.length > 0 && (
+            <>
+              <h4>Фронтенд</h4>
+              <ul>{p.frontend_stack.map(t => <li>{t}</li>)}</ul>
+            </>
+          )}
+          {p.backend_stack && p.backend_stack.length > 0 && (
+            <>
+              <h4>Бэкенд</h4>
+              <ul>{p.backend_stack.map(t => <li>{t}</li>)}</ul>
+            </>
+          )}
+        </div>
+
+        {platforms.length > 0 && (
+          <div class="kel-project__meta-card">
+            <h3>Собранные приложения</h3>
+            <ul class="kel-project__apps">
+              {platforms.map(a => (
+                <li>
+                  <span class="kel-project__app-pill">{platformLabel(a.platform)}</span>
+                  {a.label && <span class="kel-project__app-label">{a.label}</span>}
+                  {a.store_url && <a href={a.store_url} rel="noopener" target="_blank">Открыть ↗</a>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </aside>
+
+      <div class="kel-project__overview">
+        {p.overview ? (
+          <div data-lightbox set:html={sanitizeRichHtml(p.overview)} />
+        ) : (
+          <p class="kel-project__empty">Подробного описания пока нет.</p>
+        )}
+
+        {gallery.length > 0 && (
+          <div class="kel-project__gallery">
+            {gallery.map(g => (
+              <figure>
+                <img
+                  src={g.src}
+                  srcset={g.srcset}
+                  sizes="(min-width: 1180px) 760px, 100vw"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+              </figure>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  </article>
+
+</BaseLayout>
+
+<style>
+  .kel-project__back {
+    display: inline-block;
+    margin-bottom: 24px;
+    color: var(--kel-text-3);
+    font-size: 13px;
+    font-family: var(--kel-font-mono);
+  }
+  .kel-project__head {
+    padding: clamp(56px, 10vw, 112px) 0 clamp(40px, 6vw, 64px);
+    background:
+      radial-gradient(50% 60% at 0% 0%, rgba(56,189,248,0.08), transparent 70%),
+      var(--kel-bg);
+    border-bottom: 1px solid var(--kel-border);
+  }
+  .kel-project__head h1 {
+    font-size: clamp(36px, 6vw, 64px);
+    margin: 10px 0 16px;
+    letter-spacing: -0.03em;
+  }
+  .kel-project__lede {
+    color: var(--kel-text-2);
+    font-size: 18px;
+    max-width: 64ch;
+    margin: 0 0 22px;
+  }
+  .kel-project__chips {
+    list-style: none;
+    margin: 0 0 28px;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .kel-project__chips li {
+    font-family: var(--kel-font-mono);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--kel-accent);
+    background: var(--kel-accent-soft);
+    padding: 5px 10px;
+    border-radius: 4px;
+  }
+  .kel-project__links {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .kel-project__cover {
+    max-width: var(--kel-max);
+    margin: -32px auto 0;
+    padding: 0 var(--kel-gutter);
+  }
+  .kel-project__cover img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--kel-radius-lg);
+    border: 1px solid var(--kel-border);
+    display: block;
+  }
+
+  .kel-project__body {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 48px;
+    padding-top: 56px;
+    padding-bottom: 64px;
+  }
+  @media (max-width: 880px) {
+    .kel-project__body { grid-template-columns: 1fr; gap: 28px; }
+  }
+
+  .kel-project__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: sticky;
+    top: 96px;
+    align-self: start;
+  }
+  @media (max-width: 880px) {
+    .kel-project__meta { position: static; }
+  }
+  .kel-project__meta-card {
+    border: 1px solid var(--kel-border);
+    border-radius: var(--kel-radius);
+    background: var(--kel-bg-alt);
+    padding: 20px 22px;
+  }
+  .kel-project__meta-card h3 {
+    font-family: var(--kel-font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--kel-accent);
+    margin: 0 0 14px;
+  }
+  .kel-project__meta-card h4 {
+    margin: 14px 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--kel-text-3);
+  }
+  .kel-project__meta-card h4:first-of-type { margin-top: 0; }
+  .kel-project__meta-card ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .kel-project__meta-card li {
+    font-family: var(--kel-font-mono);
+    font-size: 12px;
+    color: var(--kel-text);
+    background: var(--kel-bg-3);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--kel-border);
+  }
+  .kel-project__apps li {
+    background: transparent;
+    border: 0;
+    padding: 4px 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    color: var(--kel-text-2);
+    font-size: 14px;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .kel-project__app-pill {
+    font-family: var(--kel-font-mono);
+    font-size: 10.5px;
+    color: var(--kel-accent);
+    background: var(--kel-accent-soft);
+    padding: 3px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.06em;
+  }
+  .kel-project__app-label { color: var(--kel-text); }
+
+  .kel-project__overview {
+    color: var(--kel-text);
+    line-height: 1.75;
+    font-size: 16.5px;
+  }
+  .kel-project__overview p { margin: 0 0 20px; color: var(--kel-text-2); }
+  .kel-project__overview h2 {
+    font-size: 24px; margin: 36px 0 14px;
+  }
+  .kel-project__overview h3 {
+    font-size: 18px; margin: 28px 0 10px;
+  }
+  .kel-project__overview ul, .kel-project__overview ol {
+    color: var(--kel-text-2);
+    padding-left: 22px;
+    margin: 0 0 20px;
+  }
+  .kel-project__overview code {
+    background: var(--kel-bg-3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.93em;
+  }
+  .kel-project__empty {
+    color: var(--kel-text-3);
+    font-style: italic;
+  }
+
+  .kel-project__gallery {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .kel-project__gallery figure {
+    margin: 0;
+    border: 1px solid var(--kel-border);
+    border-radius: var(--kel-radius);
+    overflow: hidden;
+    background: var(--kel-bg-alt);
+  }
+  .kel-project__gallery img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+</style>

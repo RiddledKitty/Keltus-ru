@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import { listProjects } from '../../lib/directus';
+
+const projects = await listProjects();
+---
+
+<BaseLayout seo={{
+  title: 'Проекты — Keltus',
+  description: 'Подборка проектов под заказ от Keltus — форумы, мессенджеры, системы голосования, знакомств, автоматизация ЧПУ, агрегация новостей.',
+}}>
+  <section class="kel-page-head">
+    <div class="kel-container">
+      <span class="kel-eyebrow">Портфолио</span>
+      <h1>Что мы построили.</h1>
+      <p>Каждый проект здесь был сделан с нуля под реальную задачу клиента —
+         без тем, без плагинов, без шаблонных «фабрик».</p>
+    </div>
+  </section>
+
+  <section class="kel-section kel-container">
+    {projects.length > 0 ? (
+      <div class="kel-grid">
+        {projects.map(p => <ProjectCard project={p} />)}
+      </div>
+    ) : (
+      <p class="kel-empty">Проектов пока нет. Зайдите чуть позже.</p>
+    )}
+  </section>
+</BaseLayout>
+
+<style>
+  .kel-page-head {
+    padding: clamp(72px, 10vw, 120px) 0 clamp(40px, 6vw, 64px);
+    border-bottom: 1px solid var(--kel-border);
+    background:
+      radial-gradient(50% 60% at 0% 0%, rgba(56,189,248,0.08), transparent 70%),
+      var(--kel-bg);
+  }
+  .kel-page-head h1 {
+    font-size: clamp(36px, 6vw, 64px);
+    margin: 10px 0 16px;
+    letter-spacing: -0.03em;
+  }
+  .kel-page-head p {
+    color: var(--kel-text-2);
+    max-width: 60ch;
+    font-size: 17px;
+    margin: 0;
+  }
+  .kel-section { padding: 64px 0 96px; }
+  .kel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+  }
+  .kel-empty {
+    color: var(--kel-text-2);
+    text-align: center;
+    padding: 80px 0;
+  }
+</style>

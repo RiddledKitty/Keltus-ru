@@ -1,0 +1,167 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="kel-footer">
+  <div class="kel-footer__inner kel-container">
+    <div class="kel-footer__brand">
+      <span class="kel-footer__mark">K</span>
+      <span class="kel-footer__text">
+        <strong>Keltus</strong> — программное обеспечение на заказ, без компромиссов.
+      </span>
+    </div>
+    <nav class="kel-footer__links" aria-label="Подвал">
+      <a href="/projects/">Проекты</a>
+      <a href="/team/">Команда</a>
+      <a href="/technologies/">Технологии</a>
+      <a href="/contact/">Контакты</a>
+    </nav>
+    <p class="kel-footer__legal">
+      © {year} Keltus. Создано на Astro и Directus.
+    </p>
+    <p class="kel-perfbadge" aria-live="polite" aria-label="Показатели производительности страницы">
+      <span class="kel-perfbadge__prompt">$</span>
+      <span class="kel-perfbadge__cmd">stat .</span>
+      <span class="kel-perfbadge__sep">·</span>
+      <span class="kel-perfbadge__size" data-perf="size">— КБ</span>
+      <span class="kel-perfbadge__sep">·</span>
+      <span class="kel-perfbadge__lcp"  data-perf="lcp">LCP —</span>
+      <span class="kel-perfbadge__sep">·</span>
+      <span class="kel-perfbadge__js"   data-perf="js">— внешн. JS</span>
+      <span class="kel-perfbadge__sep">·</span>
+      <span class="kel-perfbadge__cache" data-perf="cache">кэш: —</span>
+    </p>
+  </div>
+</footer>
+
+<script>
+  // Live performance badge — reads real metrics for this page via
+  // PerformanceObserver + Navigation Timing. Runs once, after LCP fires.
+  (() => {
+    const $ = (k: string) => document.querySelector<HTMLElement>(`[data-perf="${k}"]`);
+    const fmtKB = (b: number) => b >= 1024 * 1024
+      ? `${(b / (1024 * 1024)).toFixed(2)} МБ`
+      : `${Math.max(1, Math.round(b / 1024))} КБ`;
+
+    function compute() {
+      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+      const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
+      const htmlTransferred = nav?.transferSize ?? 0;
+      const htmlBodySize    = nav?.encodedBodySize ?? 0;
+      const resourceBytes   = resources.reduce((s, r) => s + (r.transferSize || 0), 0);
+      const totalBytes      = htmlTransferred + resourceBytes;
+      const jsBytes = resources
+        .filter(r => r.name.endsWith('.js') || (r as any).initiatorType === 'script')
+        .reduce((s, r) => s + (r.transferSize || 0), 0);
+
+      // Three-way cache label, ordered from cheapest to most expensive:
+      //   bfcache  → browser used an in-memory page snapshot, no request
+      //   304       → server confirmed unchanged, body served from local cache
+      //   fresh     → full body came over the wire
+      let cacheLabel = 'кэш: свежий';
+      if (nav) {
+        if (htmlTransferred === 0 && htmlBodySize > 0)        cacheLabel = 'кэш: bfcache';
+        else if (htmlBodySize > 0 && htmlTransferred < htmlBodySize) cacheLabel = 'кэш: 304';
+      }
+
+      const $s = $('size');  if ($s) $s.textContent = fmtKB(totalBytes);
+      const $j = $('js');    if ($j) $j.textContent = jsBytes > 0 ? `${fmtKB(jsBytes)} JS` : '0 внешн. JS';
+      const $c = $('cache'); if ($c) $c.textContent = cacheLabel;
+    }
+
+    function watchLcp() {
+      const $l = $('lcp');
+      try {
+        const po = new PerformanceObserver((list) => {
+          const entries = list.getEntries();
+          const last = entries[entries.length - 1] as PerformanceEntry;
+          if ($l) $l.textContent = `LCP ${Math.round(last.startTime)} ms`;
+        });
+        po.observe({ type: 'largest-contentful-paint', buffered: true });
+      } catch { /* LCP not supported — leave the placeholder */ }
+    }
+
+    if (document.readyState === 'complete') {
+      compute(); watchLcp();
+    } else {
+      window.addEventListener('load', () => { compute(); watchLcp(); }, { once: true });
+    }
+  })();
+</script>
+
+<style>
+  .kel-footer {
+    border-top: 1px solid var(--kel-border);
+    background: var(--kel-bg-alt);
+    padding: 48px 0 64px;
+    margin-top: 96px;
+  }
+  .kel-footer__inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 32px;
+    align-items: center;
+  }
+  .kel-footer__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--kel-text-2);
+    font-size: 14px;
+  }
+  .kel-footer__mark {
+    display: inline-block;
+    width: 28px; height: 28px;
+    line-height: 28px;
+    text-align: center;
+    background: var(--kel-accent);
+    color: #04111c;
+    border-radius: 6px;
+    font-weight: 800;
+    font-family: var(--kel-font-mono);
+  }
+  .kel-footer__text strong { color: var(--kel-text); }
+  .kel-footer__links {
+    display: inline-flex;
+    gap: 20px;
+    font-size: 14px;
+  }
+  .kel-footer__links a { color: var(--kel-text-2); }
+  .kel-footer__links a:hover { color: var(--kel-text); }
+  .kel-footer__legal {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--kel-text-3);
+    font-size: 12.5px;
+    font-family: var(--kel-font-mono);
+  }
+  .kel-perfbadge {
+    grid-column: 1 / -1;
+    margin: 6px 0 0;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, .025);
+    border: 1px solid var(--kel-border);
+    border-radius: 6px;
+    color: var(--kel-text-2);
+    font-family: var(--kel-font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: baseline;
+    width: fit-content;
+  }
+  .kel-perfbadge__prompt { color: #67e8f9; font-weight: 700; }
+  .kel-perfbadge__cmd    { color: var(--kel-text); }
+  .kel-perfbadge__sep    { color: var(--kel-text-3); opacity: .6; }
+  .kel-perfbadge__size   { color: #4ade80; }   /* green — payload */
+  .kel-perfbadge__lcp    { color: #fbbf24; }   /* amber — timing */
+  .kel-perfbadge__js     { color: #e879f9; }   /* magenta — js cost */
+  .kel-perfbadge__cache  { color: #7dd3fc; }   /* sky — cache */
+  @media (max-width: 620px) {
+    .kel-footer__inner { grid-template-columns: 1fr; gap: 20px; }
+    .kel-footer__links { flex-wrap: wrap; }
+    .kel-perfbadge     { font-size: 11.5px; }
+  }
+</style>

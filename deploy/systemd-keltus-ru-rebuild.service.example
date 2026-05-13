@@ -1,0 +1,17 @@
+[Unit]
+Description=Keltus Astro rebuild listener
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/keltus.ru
+EnvironmentFile=/var/www/keltus.ru/.deploy-secrets
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /var/www/keltus.ru/cms/scripts/rebuild-listener.mjs
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

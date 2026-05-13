@@ -1,0 +1,22 @@
+# ── Generated / cached ────────────────────────────────
+node_modules/
+dist/
+.astro/
+.cache/
+
+# ── Local & operational ───────────────────────────────
+.DS_Store
+*.log
+*.bak
+*.bak.*
+
+# ── Secrets — NEVER commit ───────────────────────────
+.env
+.env.local
+.env.*.local
+.deploy-secrets
+
+# ── Tooling / workspace metadata ──────────────────────
+.claude/
+.idea/
+.vscode/

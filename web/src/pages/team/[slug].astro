@@ -1,0 +1,165 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Avatar from '../../components/Avatar.astro';
+import { listTeam, getTeamMember, sanitizeRichHtml } from '../../lib/directus';
+
+export async function getStaticPaths() {
+  const all = await listTeam();
+  return all.map(m => ({ params: { slug: m.slug } }));
+}
+
+const { slug } = Astro.params;
+const m = await getTeamMember(slug!);
+if (!m) {
+  return new Response('Не найдено', { status: 404 });
+}
+---
+
+<BaseLayout seo={{
+  title: `${m.name} — Keltus`,
+  description: m.bio ?? `${m.name} — ${m.role ?? 'участник команды'} в Keltus.`,
+}}>
+  <article class="kel-person">
+    <header class="kel-person__head">
+      <div class="kel-container kel-person__head-inner">
+        <a href="/team/" class="kel-person__back">← Вся команда</a>
+
+        <div class="kel-person__hero">
+          <Avatar name={m.name} photoId={m.photo} size={260} />
+          <div class="kel-person__heading">
+            <span class="kel-eyebrow">{m.role}</span>
+            <h1>{m.name}</h1>
+            {m.location && (
+              <p class="kel-person__loc">
+                <span aria-hidden="true">📍</span> {m.location}
+              </p>
+            )}
+            {m.bio && <p class="kel-person__lede">{m.bio}</p>}
+            {(m.socials?.length ?? 0) > 0 && (
+              <ul class="kel-person__socials">
+                {m.socials!.map(s => (
+                  <li>
+                    <a href={s.url} rel="noopener" target="_blank">{s.label} ↗</a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="kel-person__body kel-container">
+      {m.story ? (
+        <div class="kel-person__story" data-lightbox set:html={sanitizeRichHtml(m.story)} />
+      ) : (
+        <p class="kel-person__empty">История ещё пишется — зайдите чуть позже.</p>
+      )}
+    </section>
+  </article>
+</BaseLayout>
+
+<style>
+  .kel-person__back {
+    display: inline-block;
+    margin-bottom: 24px;
+    color: var(--kel-text-3);
+    font-size: 13px;
+    font-family: var(--kel-font-mono);
+  }
+  .kel-person__back:hover { color: var(--kel-accent); }
+
+  .kel-person__head {
+    padding: clamp(56px, 10vw, 112px) 0 clamp(40px, 6vw, 64px);
+    background:
+      radial-gradient(50% 60% at 0% 0%, rgba(56,189,248,0.08), transparent 70%),
+      var(--kel-bg);
+    border-bottom: 1px solid var(--kel-border);
+  }
+
+  .kel-person__hero {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (max-width: 720px) {
+    .kel-person__hero {
+      grid-template-columns: 1fr;
+      gap: 24px;
+      text-align: left;
+    }
+  }
+
+  .kel-person__heading h1 {
+    font-size: clamp(36px, 6vw, 56px);
+    margin: 8px 0 12px;
+    letter-spacing: -0.03em;
+  }
+  .kel-person__loc {
+    margin: 0 0 16px;
+    color: var(--kel-text-2);
+    font-size: 15px;
+  }
+  .kel-person__lede {
+    color: var(--kel-text-2);
+    font-size: 17px;
+    line-height: 1.55;
+    max-width: 60ch;
+    margin: 0 0 24px;
+  }
+  .kel-person__socials {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .kel-person__socials a {
+    font-family: var(--kel-font-mono);
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--kel-text-2);
+    border: 1px solid var(--kel-border);
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .kel-person__socials a:hover {
+    color: var(--kel-accent);
+    border-color: var(--kel-accent);
+    background: var(--kel-accent-soft);
+  }
+
+  .kel-person__body {
+    padding-top: 56px;
+    padding-bottom: 96px;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .kel-person__story {
+    color: var(--kel-text);
+    font-size: 17px;
+    line-height: 1.75;
+  }
+  .kel-person__story p {
+    margin: 0 0 22px;
+    color: var(--kel-text-2);
+  }
+  .kel-person__story p:last-child { margin-bottom: 0; }
+  .kel-person__story h2 {
+    margin: 36px 0 14px;
+    font-size: 22px;
+  }
+  .kel-person__story h3 {
+    margin: 28px 0 10px;
+    font-size: 17px;
+  }
+  .kel-person__story em { color: var(--kel-text); }
+  .kel-person__empty {
+    color: var(--kel-text-3);
+    font-style: italic;
+  }
+</style>

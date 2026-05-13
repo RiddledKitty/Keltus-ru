@@ -1,0 +1,174 @@
+---
+import type { Testimonial } from '../lib/directus';
+import { assetUrl } from '../lib/directus';
+
+interface Props { items: Testimonial[]; }
+const { items } = Astro.props;
+---
+
+{items.length > 0 && (
+  <div class="kel-testi" data-testi-carousel>
+    <ol class="kel-testi__slides" role="list">
+      {items.map((t, i) => (
+        <li class:list={['kel-testi__slide', i === 0 && 'is-active']} aria-hidden={i === 0 ? 'false' : 'true'}>
+          <blockquote class="kel-testi__quote">
+            <p>"{t.quote}"</p>
+          </blockquote>
+          <div class="kel-testi__author">
+            {t.photo && (
+              <img
+                src={assetUrl(t.photo, { width: 120, height: 120, fit: 'cover', format: 'webp' })}
+                alt=""
+                width="48" height="48"
+                loading="lazy" decoding="async"
+              />
+            )}
+            <div class="kel-testi__author-text">
+              <strong>{t.author}</strong>
+              <span>
+                {t.author_role}{t.author_role && t.company && ', '}{t.company}
+              </span>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+    {items.length > 1 && (
+      <div class="kel-testi__dots" role="tablist" aria-label="Отзывы">
+        {items.map((_, i) => (
+          <button
+            type="button"
+            class:list={['kel-testi__dot', i === 0 && 'is-active']}
+            data-testi-dot={i}
+            aria-label={`Показать отзыв ${i + 1}`}
+            aria-selected={i === 0 ? 'true' : 'false'}
+            role="tab"
+          ></button>
+        ))}
+      </div>
+    )}
+  </div>
+)}
+
+<style>
+  .kel-testi {
+    position: relative;
+    border: 1px solid var(--kel-border);
+    border-radius: var(--kel-radius-lg);
+    background: var(--kel-bg-alt);
+    padding: clamp(28px, 5vw, 56px);
+    min-height: 220px;
+  }
+  .kel-testi__slides {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: relative;
+  }
+  .kel-testi__slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity .35s ease, transform .35s ease;
+    pointer-events: none;
+  }
+  .kel-testi__slide.is-active {
+    position: relative;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .kel-testi__quote {
+    margin: 0 0 24px;
+    padding: 0;
+  }
+  .kel-testi__quote p {
+    margin: 0;
+    font-size: clamp(18px, 2.2vw, 22px);
+    line-height: 1.5;
+    color: var(--kel-text);
+    font-weight: 500;
+  }
+  .kel-testi__author {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .kel-testi__author img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--kel-border-2);
+  }
+  .kel-testi__author-text { display: flex; flex-direction: column; }
+  .kel-testi__author-text strong {
+    color: var(--kel-text);
+    font-size: 14.5px;
+  }
+  .kel-testi__author-text span {
+    color: var(--kel-text-2);
+    font-size: 13px;
+  }
+
+  .kel-testi__dots {
+    position: absolute;
+    bottom: 18px;
+    right: 24px;
+    display: flex;
+    gap: 6px;
+  }
+  .kel-testi__dot {
+    width: 8px; height: 8px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--kel-border-2);
+    padding: 0;
+    cursor: pointer;
+    transition: background .15s ease, transform .15s ease;
+  }
+  .kel-testi__dot.is-active {
+    background: var(--kel-accent);
+    transform: scale(1.2);
+  }
+</style>
+
+<script>
+  function setupCarousel() {
+    const root = document.querySelector('[data-testi-carousel]') as HTMLElement | null;
+    if (!root || (root as any)._wired) return;
+    (root as any)._wired = true;
+    const slides = Array.from(root.querySelectorAll('.kel-testi__slide'));
+    const dots   = Array.from(root.querySelectorAll('[data-testi-dot]')) as HTMLButtonElement[];
+    if (slides.length < 2) return;
+
+    let i = 0;
+    const show = (next: number) => {
+      slides[i].classList.remove('is-active');
+      slides[i].setAttribute('aria-hidden', 'true');
+      dots[i]?.classList.remove('is-active');
+      dots[i]?.setAttribute('aria-selected', 'false');
+      i = (next + slides.length) % slides.length;
+      slides[i].classList.add('is-active');
+      slides[i].setAttribute('aria-hidden', 'false');
+      dots[i]?.classList.add('is-active');
+      dots[i]?.setAttribute('aria-selected', 'true');
+    };
+
+    dots.forEach((d, idx) => d.addEventListener('click', () => {
+      clearInterval(timer);
+      show(idx);
+      timer = setInterval(() => show(i + 1), 7000);
+    }));
+
+    let timer = setInterval(() => show(i + 1), 7000);
+
+    // Pause on hover
+    root.addEventListener('mouseenter', () => clearInterval(timer));
+    root.addEventListener('mouseleave', () => {
+      timer = setInterval(() => show(i + 1), 7000);
+    });
+  }
+  setupCarousel();
+  document.addEventListener('astro:page-load', setupCarousel);
+</script>

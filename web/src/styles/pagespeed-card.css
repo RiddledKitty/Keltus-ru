@@ -1,0 +1,137 @@
+/* PageSpeed Insights-style ring cards. Used both by the static
+   <PageSpeedCompare /> Astro component on the home page AND by the
+   /benchmark/ page which builds the same HTML dynamically — hence the
+   selectors must be global. */
+
+.kel-ps {
+  border: 1px solid var(--kel-border);
+  border-radius: var(--kel-radius-lg);
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(56, 189, 248, .05), transparent 60%),
+    var(--kel-bg-alt);
+  padding: clamp(28px, 4vw, 48px);
+}
+.kel-ps__head { margin: 0 0 28px; }
+.kel-ps__head h2 {
+  font-size: clamp(24px, 3vw, 32px);
+  margin: 8px 0 6px;
+}
+.kel-ps__head p {
+  margin: 0;
+  color: var(--kel-text-2);
+  max-width: 64ch;
+  font-size: 15px;
+}
+.kel-ps__cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 720px) {
+  .kel-ps__cards { grid-template-columns: 1fr; }
+}
+.kel-ps__card {
+  background: var(--kel-bg);
+  border: 1px solid var(--kel-border);
+  border-radius: var(--kel-radius);
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: relative;
+}
+.kel-ps__card--right {
+  border-color: var(--kel-accent);
+  box-shadow:
+    0 0 0 1px var(--kel-accent-soft),
+    0 8px 28px rgba(56, 189, 248, .08);
+}
+.kel-ps__card--right::before {
+  content: 'Ours';
+  position: absolute;
+  top: -10px;
+  right: 14px;
+  background: var(--kel-accent);
+  color: #04111c;
+  font-family: var(--kel-font-mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.kel-ps__card-head h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--kel-text);
+}
+.kel-ps__card-head p {
+  margin: 0;
+  color: var(--kel-text-3);
+  font-family: var(--kel-font-mono);
+  font-size: 11.5px;
+  letter-spacing: .04em;
+}
+.kel-ps__rings {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.kel-ps__ring {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.kel-ps__ring-circle {
+  position: relative;
+  width: 64px; height: 64px;
+  flex-shrink: 0;
+}
+.kel-ps__ring-circle svg {
+  width: 100%; height: 100%;
+  transform: rotate(-90deg);
+  display: block;
+}
+.kel-ps__ring-track {
+  fill: none;
+  stroke: var(--kel-bg-3);
+  stroke-width: 5;
+}
+.kel-ps__ring-arc {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset .8s ease;
+}
+.kel-ps__ring.is-good .kel-ps__ring-arc { stroke: var(--kel-success); }
+.kel-ps__ring.is-avg  .kel-ps__ring-arc { stroke: var(--kel-warn); }
+.kel-ps__ring.is-bad  .kel-ps__ring-arc { stroke: var(--kel-danger); }
+.kel-ps__ring-val {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--kel-font-mono);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--kel-text);
+  line-height: 1;
+}
+.kel-ps__ring.is-good .kel-ps__ring-val { color: var(--kel-success); }
+.kel-ps__ring.is-avg  .kel-ps__ring-val { color: var(--kel-warn); }
+.kel-ps__ring.is-bad  .kel-ps__ring-val { color: var(--kel-danger); }
+.kel-ps__ring-label {
+  font-family: var(--kel-font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--kel-text-3);
+  text-align: center;
+}
+@media (max-width: 880px) and (min-width: 721px) {
+  .kel-ps__rings { grid-template-columns: repeat(2, 1fr); }
+}

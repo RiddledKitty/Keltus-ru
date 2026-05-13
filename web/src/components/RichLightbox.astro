@@ -1,0 +1,134 @@
+---
+// Global lightbox + image-alignment CSS for rich-text fields (project.overview,
+// team_member.story). Opts in via `data-lightbox` attribute on the container.
+// TinyMCE writes alignleft / aligncenter / alignright classes when the user
+// picks an alignment in the editor toolbar.
+---
+<style is:global>
+  [data-lightbox] img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--kel-radius);
+    cursor: zoom-in;
+  }
+  /* TinyMCE alignment classes (legacy <p style="text-align:..."> wraps also handled below) */
+  [data-lightbox] img.alignleft,
+  [data-lightbox] p[style*="text-align: left"] img {
+    float: left;
+    margin: 4px 24px 12px 0;
+    max-width: min(50%, 420px);
+  }
+  [data-lightbox] img.alignright,
+  [data-lightbox] p[style*="text-align: right"] img {
+    float: right;
+    margin: 4px 0 12px 24px;
+    max-width: min(50%, 420px);
+  }
+  [data-lightbox] img.aligncenter,
+  [data-lightbox] p[style*="text-align: center"] img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    float: none;
+  }
+  /* Clearfix so following paragraphs start below floated images */
+  [data-lightbox] p::after { content: ''; display: table; clear: both; }
+
+  @media (max-width: 640px) {
+    [data-lightbox] img.alignleft,
+    [data-lightbox] img.alignright,
+    [data-lightbox] p[style*="text-align: left"] img,
+    [data-lightbox] p[style*="text-align: right"] img {
+      float: none;
+      max-width: 100%;
+      margin: 8px auto 16px;
+      display: block;
+    }
+  }
+
+  /* Lightbox overlay */
+  .kel-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 8, 14, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity .18s ease;
+    cursor: zoom-out;
+  }
+  .kel-lightbox.is-open { opacity: 1; }
+  .kel-lightbox img {
+    max-width: 95vw;
+    max-height: 90vh;
+    width: auto;
+    height: auto;
+    border-radius: var(--kel-radius);
+    box-shadow: 0 24px 80px rgba(0,0,0,.6);
+    cursor: zoom-out;
+  }
+  .kel-lightbox__close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    color: var(--kel-text);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .kel-lightbox__close:hover { background: rgba(255,255,255,.15); }
+</style>
+
+<script>
+  function bareAssetUrl(src: string): string {
+    // Strip query string so the lightbox shows the original at full resolution.
+    const i = src.indexOf('?');
+    return i > 0 ? src.slice(0, i) : src;
+  }
+
+  function openLightbox(src: string, alt: string) {
+    const existing = document.querySelector('.kel-lightbox');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.className = 'kel-lightbox';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', alt || 'Изображение');
+    overlay.innerHTML = `
+      <button class="kel-lightbox__close" type="button" aria-label="Закрыть">&times;</button>
+      <img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" decoding="async" />
+    `;
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => overlay.classList.add('is-open'));
+
+    const close = () => {
+      overlay.classList.remove('is-open');
+      document.body.style.overflow = '';
+      setTimeout(() => overlay.remove(), 200);
+      document.removeEventListener('keydown', onKey);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    overlay.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+  }
+
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (!(target instanceof HTMLImageElement)) return;
+    if (!target.closest('[data-lightbox]')) return;
+    e.preventDefault();
+    openLightbox(bareAssetUrl(target.currentSrc || target.src), target.alt || '');
+  });
+</script>

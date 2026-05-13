@@ -1,0 +1,12 @@
+{
+  "name": "directus-extension-pagespeed",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "directus:extension": {
+    "type": "endpoint",
+    "path": "dist/index.js",
+    "source": "dist/index.js",
+    "host": "^11.0.0"
+  }
+}

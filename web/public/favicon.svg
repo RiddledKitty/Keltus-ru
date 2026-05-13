@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Keltus">
+  <rect width="64" height="64" rx="12" fill="#38bdf8"/>
+  <text x="32" y="46" text-anchor="middle"
+        font-family="JetBrains Mono, IBM Plex Mono, SF Mono, ui-monospace, Menlo, Consolas, monospace"
+        font-weight="800"
+        font-size="44"
+        fill="#04111c"
+        letter-spacing="-1">K</text>
+</svg>

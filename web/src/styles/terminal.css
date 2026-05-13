@@ -1,0 +1,129 @@
+/* Live-log terminal overlay used by /contact/ submissions and /benchmark/
+   audits. Created at runtime via JS, so the rules must be global rather
+   than Astro-scoped. */
+
+.kel-smtp-overlay {
+  position: fixed; inset: 0;
+  background: rgba(4, 8, 14, 0.84);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity .18s ease;
+}
+.kel-smtp-overlay.is-open { opacity: 1; }
+
+.kel-smtp-terminal {
+  width: min(760px, 100%);
+  height: min(560px, 80vh);
+  background: #060c14;
+  border: 1px solid var(--kel-border-2);
+  border-radius: var(--kel-radius-lg);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .7);
+  font-family: var(--kel-font-mono);
+}
+.kel-smtp-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 14px;
+  background: linear-gradient(180deg, #0e1825, #091221);
+  border-bottom: 1px solid var(--kel-border);
+}
+.kel-smtp-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.kel-smtp-dot--r { background: #ff5f57; }
+.kel-smtp-dot--y { background: #febc2e; }
+.kel-smtp-dot--g { background: #28c840; }
+.kel-smtp-title {
+  margin-left: 10px;
+  font-size: 12.5px;
+  color: var(--kel-text-2);
+  letter-spacing: .02em;
+}
+.kel-smtp-close {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--kel-border-2);
+  color: var(--kel-text-2);
+  width: 28px; height: 28px;
+  border-radius: 4px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.kel-smtp-close:hover { color: var(--kel-text); border-color: var(--kel-accent); }
+
+.kel-smtp-body {
+  flex: 1;
+  padding: 14px 18px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--kel-text-2);
+}
+.kel-smtp-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 1px 0;
+  animation: kel-smtp-fadein .18s ease;
+}
+.kel-smtp-line--info   { color: var(--kel-text-2); }
+.kel-smtp-line--ok     { color: var(--kel-success); }
+.kel-smtp-line--warn   { color: var(--kel-warn); }
+.kel-smtp-line--err    { color: var(--kel-danger); }
+.kel-smtp-line--wire   { color: var(--kel-fiber); opacity: .8; }
+.kel-smtp-line--stage {
+  color: var(--kel-text);
+  font-weight: 700;
+  letter-spacing: .04em;
+  margin: 14px 0 4px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, .12);
+}
+.kel-smtp-line--stage:first-child {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0;
+}
+.kel-smtp-line--prompt { color: #67e8f9; font-weight: 600; margin-top: 2px; }
+.kel-smtp-line--sql    { color: #e879f9; }
+.kel-smtp-line--http   { color: #fbbf24; font-weight: 600; }
+.kel-smtp-line--header { color: #7dd3fc; }
+.kel-smtp-line--send   { color: #cbd5e1; }
+.kel-smtp-line--recv   { color: #4ade80; }
+.kel-smtp-line--body   { color: #94a3b8; }
+@keyframes kel-smtp-fadein {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.kel-smtp-footer {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 16px;
+  background: #07101a;
+  border-top: 1px solid var(--kel-border);
+  font-size: 13px;
+}
+.kel-smtp-footer.is-ok  { background: rgba(16, 185, 129, .08); }
+.kel-smtp-footer.is-err { background: rgba(244, 63, 94, .08); }
+.kel-smtp-spinner {
+  width: 12px; height: 12px;
+  border: 2px solid var(--kel-border-2);
+  border-top-color: var(--kel-accent);
+  border-radius: 50%;
+  animation: kel-smtp-spin .8s linear infinite;
+  flex-shrink: 0;
+}
+.kel-smtp-spinner.is-done {
+  animation: none;
+  border: none;
+  background: currentColor;
+}
+.kel-smtp-spinner.is-ok  { color: var(--kel-success); }
+.kel-smtp-spinner.is-err { color: var(--kel-danger); }
+.kel-smtp-state { color: var(--kel-text); }
+@keyframes kel-smtp-spin { to { transform: rotate(360deg); } }

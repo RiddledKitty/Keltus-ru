@@ -1,0 +1,131 @@
+---
+import type { Project } from '../lib/directus';
+import { assetUrl } from '../lib/directus';
+
+interface Props { project: Project; }
+const { project: p } = Astro.props;
+
+const coverSrc = p.cover_image
+  ? assetUrl(p.cover_image, { width: 480, quality: 80, format: 'webp' })
+  : '';
+const coverSrcset = p.cover_image
+  ? [320, 480, 720, 960]
+      .map(w => `${assetUrl(p.cover_image, { width: w, quality: 80, format: 'webp' })} ${w}w`)
+      .join(', ')
+  : '';
+const platforms = (p.apps ?? []).map(a => a.platform).filter(Boolean);
+const platformLabel = (pf: string) =>
+  pf === 'ios' ? 'iOS' : pf === 'android' ? 'Android' : pf === 'web' ? 'Веб' : 'Десктоп';
+---
+
+<a href={`/projects/${p.slug}/`} class="kel-card" aria-label={`${p.name} — кейс`}>
+  {coverSrc && (
+    <div class="kel-card__media">
+      <img
+        src={coverSrc}
+        srcset={coverSrcset}
+        sizes="(min-width: 980px) 380px, (min-width: 620px) 50vw, 100vw"
+        alt=""
+        loading="lazy"
+        decoding="async"
+        width="480"
+        height="270"
+      />
+    </div>
+  )}
+  <div class="kel-card__body">
+    <h3 class="kel-card__title">{p.name}</h3>
+    {p.tagline && <p class="kel-card__tagline">{p.tagline}</p>}
+    {(p.highlights?.length ?? 0) > 0 && (
+      <ul class="kel-card__tags">
+        {p.highlights!.slice(0, 3).map(h => <li>{h}</li>)}
+      </ul>
+    )}
+    {platforms.length > 0 && (
+      <div class="kel-card__platforms" aria-label="Собранные приложения">
+        {[...new Set(platforms)].map(pf => (
+          <span class="kel-card__platform">{platformLabel(pf)}</span>
+        ))}
+      </div>
+    )}
+  </div>
+</a>
+
+<style>
+  .kel-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--kel-border);
+    border-radius: var(--kel-radius-lg);
+    background: var(--kel-bg-alt);
+    overflow: hidden;
+    color: var(--kel-text);
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+  .kel-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--kel-border-2);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    color: var(--kel-text);
+  }
+  .kel-card__media {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: linear-gradient(135deg, #11161f, #1a212e);
+  }
+  .kel-card__media img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform .4s ease;
+  }
+  .kel-card:hover .kel-card__media img { transform: scale(1.03); }
+  .kel-card__body {
+    padding: 22px 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .kel-card__title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+  }
+  .kel-card__tagline {
+    margin: 0;
+    color: var(--kel-text-2);
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+  .kel-card__tags {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .kel-card__tags li {
+    font-family: var(--kel-font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--kel-text-2);
+    border: 1px solid var(--kel-border);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .kel-card__platforms {
+    margin-top: 4px;
+    display: flex;
+    gap: 6px;
+  }
+  .kel-card__platform {
+    font-family: var(--kel-font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--kel-accent);
+    background: var(--kel-accent-soft);
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+</style>

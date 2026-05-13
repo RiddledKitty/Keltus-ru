@@ -1,0 +1,83 @@
+---
+import '../styles/tokens.css';
+import '../styles/terminal.css';
+import '../styles/pagespeed-card.css';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import RichLightbox from '../components/RichLightbox.astro';
+import Konami from '../components/Konami.astro';
+import AnalyticsBeacon from '../components/AnalyticsBeacon.astro';
+import { getSiteConfig, themeOverrideCss } from '../lib/directus';
+
+interface Props {
+  seo?: {
+    title?: string;
+    description?: string;
+    ogImage?: string;
+  };
+}
+
+const { seo } = Astro.props;
+const title = seo?.title ?? 'Keltus — программное обеспечение на заказ, без компромиссов';
+const description = seo?.description ?? 'Keltus разрабатывает программное обеспечение на заказ для клиентов, которым нужно больше, чем шаблон. Сверхбыстрые фронтенды на Astro, автоматизация на Go, постквантовая криптография, интеграция ИИ.';
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://keltus.ru').toString();
+
+// Theme override CSS — empty string when the operator has accepted all
+// defaults. Fetched at build time; the rebuild-hook fires when site_config
+// changes so the static HTML reflects edits within seconds.
+const siteConfig = await getSiteConfig();
+const themeCss   = themeOverrideCss(siteConfig);
+const konamiToast = siteConfig?.konami_toast || 'да, мы знаем — но синапсы всё равно лучше.';
+---
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0a0e14" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    {seo?.ogImage && <meta property="og:image" content={seo.ogImage} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link
+      rel="preload"
+      href="/fonts/inter/InterVariable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <style>
+      @font-face {
+        font-family: InterVariable;
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+        src: url('/fonts/inter/InterVariable.woff2') format('woff2');
+      }
+      :root {
+        font-family: InterVariable, 'Inter', 'SF Pro Text', -apple-system,
+          BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+    </style>
+    {themeCss && <style set:html={themeCss}></style>}
+  </head>
+  <body>
+    <Nav />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+    <RichLightbox />
+    <Konami toast={konamiToast} />
+    <AnalyticsBeacon />
+  </body>
+</html>

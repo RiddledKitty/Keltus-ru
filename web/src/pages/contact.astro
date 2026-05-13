@@ -1,0 +1,876 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const seo = {
+  title: 'Контакты — Keltus',
+  description: 'Расскажите о своём проекте. Новые сборки, запросы на оценку, партнёрства — каждое сообщение попадает напрямую к инженеру.',
+};
+
+// Where the Astro client posts the form. Override with PUBLIC_CMS_URL at
+// build time when developing against a local Directus instance.
+const CMS_URL = import.meta.env.PUBLIC_CMS_URL || 'https://admin.keltus.ru';
+
+/* Country dialing codes for the phone-number picker. US + CA are
+ * pinned at the top (US is the default; CA shares the +1 dial), then
+ * the rest run alphabetical by ISO 3166-1 alpha-2 code. Each option
+ * shows just the flag, dial code, and 2-letter abbreviation so the
+ * select stays narrow and doesn't crowd the phone-number input.
+ *
+ * `name` is kept for the option's tooltip / accessible label only —
+ * not rendered in the closed select. */
+// Russian-market default first (this is keltus.ru). LV/BY/KZ/UA follow as
+// the most likely additional markets, then the rest alphabetical by code.
+const TOP_COUNTRIES = [
+  { code: 'RU', dial: '7',   name: 'Россия',           flag: '🇷🇺' },
+  { code: 'LV', dial: '371', name: 'Латвия',           flag: '🇱🇻' },
+  { code: 'BY', dial: '375', name: 'Беларусь',         flag: '🇧🇾' },
+  { code: 'KZ', dial: '7',   name: 'Казахстан',        flag: '🇰🇿' },
+  { code: 'UA', dial: '380', name: 'Украина',          flag: '🇺🇦' },
+];
+const REST_COUNTRIES = [
+  { code: 'AE', dial: '971', name: 'ОАЭ',                  flag: '🇦🇪' },
+  { code: 'AR', dial: '54',  name: 'Аргентина',            flag: '🇦🇷' },
+  { code: 'AT', dial: '43',  name: 'Австрия',              flag: '🇦🇹' },
+  { code: 'AU', dial: '61',  name: 'Австралия',            flag: '🇦🇺' },
+  { code: 'BE', dial: '32',  name: 'Бельгия',              flag: '🇧🇪' },
+  { code: 'BR', dial: '55',  name: 'Бразилия',             flag: '🇧🇷' },
+  { code: 'CA', dial: '1',   name: 'Канада',               flag: '🇨🇦' },
+  { code: 'CH', dial: '41',  name: 'Швейцария',            flag: '🇨🇭' },
+  { code: 'CL', dial: '56',  name: 'Чили',                 flag: '🇨🇱' },
+  { code: 'CN', dial: '86',  name: 'Китай',                flag: '🇨🇳' },
+  { code: 'CO', dial: '57',  name: 'Колумбия',             flag: '🇨🇴' },
+  { code: 'CZ', dial: '420', name: 'Чехия',                flag: '🇨🇿' },
+  { code: 'DE', dial: '49',  name: 'Германия',             flag: '🇩🇪' },
+  { code: 'DK', dial: '45',  name: 'Дания',                flag: '🇩🇰' },
+  { code: 'EE', dial: '372', name: 'Эстония',              flag: '🇪🇪' },
+  { code: 'EG', dial: '20',  name: 'Египет',               flag: '🇪🇬' },
+  { code: 'ES', dial: '34',  name: 'Испания',              flag: '🇪🇸' },
+  { code: 'FI', dial: '358', name: 'Финляндия',            flag: '🇫🇮' },
+  { code: 'FR', dial: '33',  name: 'Франция',              flag: '🇫🇷' },
+  { code: 'GR', dial: '30',  name: 'Греция',               flag: '🇬🇷' },
+  { code: 'HK', dial: '852', name: 'Гонконг',              flag: '🇭🇰' },
+  { code: 'HU', dial: '36',  name: 'Венгрия',              flag: '🇭🇺' },
+  { code: 'ID', dial: '62',  name: 'Индонезия',            flag: '🇮🇩' },
+  { code: 'IE', dial: '353', name: 'Ирландия',             flag: '🇮🇪' },
+  { code: 'IL', dial: '972', name: 'Израиль',              flag: '🇮🇱' },
+  { code: 'IN', dial: '91',  name: 'Индия',                flag: '🇮🇳' },
+  { code: 'IT', dial: '39',  name: 'Италия',               flag: '🇮🇹' },
+  { code: 'JP', dial: '81',  name: 'Япония',               flag: '🇯🇵' },
+  { code: 'KE', dial: '254', name: 'Кения',                flag: '🇰🇪' },
+  { code: 'KR', dial: '82',  name: 'Южная Корея',          flag: '🇰🇷' },
+  { code: 'LT', dial: '370', name: 'Литва',                flag: '🇱🇹' },
+  { code: 'MX', dial: '52',  name: 'Мексика',              flag: '🇲🇽' },
+  { code: 'MY', dial: '60',  name: 'Малайзия',             flag: '🇲🇾' },
+  { code: 'NG', dial: '234', name: 'Нигерия',              flag: '🇳🇬' },
+  { code: 'NL', dial: '31',  name: 'Нидерланды',           flag: '🇳🇱' },
+  { code: 'NO', dial: '47',  name: 'Норвегия',             flag: '🇳🇴' },
+  { code: 'NZ', dial: '64',  name: 'Новая Зеландия',       flag: '🇳🇿' },
+  { code: 'PE', dial: '51',  name: 'Перу',                 flag: '🇵🇪' },
+  { code: 'PH', dial: '63',  name: 'Филиппины',            flag: '🇵🇭' },
+  { code: 'PK', dial: '92',  name: 'Пакистан',             flag: '🇵🇰' },
+  { code: 'PL', dial: '48',  name: 'Польша',               flag: '🇵🇱' },
+  { code: 'PT', dial: '351', name: 'Португалия',           flag: '🇵🇹' },
+  { code: 'RO', dial: '40',  name: 'Румыния',              flag: '🇷🇴' },
+  { code: 'SA', dial: '966', name: 'Саудовская Аравия',    flag: '🇸🇦' },
+  { code: 'SE', dial: '46',  name: 'Швеция',               flag: '🇸🇪' },
+  { code: 'SG', dial: '65',  name: 'Сингапур',             flag: '🇸🇬' },
+  { code: 'TH', dial: '66',  name: 'Таиланд',              flag: '🇹🇭' },
+  { code: 'TR', dial: '90',  name: 'Турция',               flag: '🇹🇷' },
+  { code: 'TW', dial: '886', name: 'Тайвань',              flag: '🇹🇼' },
+  { code: 'UK', dial: '44',  name: 'Великобритания',       flag: '🇬🇧' },
+  { code: 'US', dial: '1',   name: 'США',                  flag: '🇺🇸' },
+  { code: 'VE', dial: '58',  name: 'Венесуэла',            flag: '🇻🇪' },
+  { code: 'VN', dial: '84',  name: 'Вьетнам',              flag: '🇻🇳' },
+  { code: 'ZA', dial: '27',  name: 'ЮАР',                  flag: '🇿🇦' },
+];
+const COUNTRY_CODES = [...TOP_COUNTRIES, ...REST_COUNTRIES];
+---
+
+<BaseLayout seo={seo}>
+  <main class="kel-contact">
+    <header class="kel-contact__head">
+      <div class="kel-contact__head-inner">
+        <div class="kel-contact__kicker">Контакты</div>
+        <h1 class="kel-contact__title">Расскажите о проекте.</h1>
+        <p class="kel-contact__lede">
+          Новые сборки, запросы на оценку, партнёрства или просто сложная
+          задача в поисках подходящего инструмента — напишите. Каждое сообщение
+          попадает в почту настоящего инженера, а не в маркетинговый ящик.
+        </p>
+      </div>
+    </header>
+
+    <section class="kel-contact__body">
+      <div class="kel-contact__grid">
+        <aside class="kel-contact__aside">
+          <div class="kel-contact__card">
+            <h3>С чем к нам обращаются</h3>
+            <ul>
+              <li>Веб-платформа под заказ с нуля</li>
+              <li>Ускорение существующего сайта</li>
+              <li>Постквантовое шифрование переписки или авторизации</li>
+              <li>Интеграция ИИ — контент, поиск, рекомендации</li>
+              <li>Автоматизация и бэкенд на Go</li>
+              <li>Интеграция с железом (ЧПУ, IoT, встраиваемые системы)</li>
+            </ul>
+          </div>
+          <div class="kel-contact__card">
+            <h3>Что будет дальше</h3>
+            <p>
+              Мы сами читаем каждое сообщение — обычно в течение одного-двух
+              дней. Если задача нам подходит, согласуем короткий созвон,
+              обсудим объём работ и пришлём письменную оценку. Без шаблонов,
+              без «агентского пакета» — только подходящий инструмент под задачу.
+            </p>
+          </div>
+        </aside>
+
+        <form class="kel-contact__form" id="kel-contact-form" data-cms-url={CMS_URL} novalidate>
+          <div class="kel-contact__row">
+            <div class="kel-contact__field">
+              <label for="cf-name">Имя <span aria-hidden="true">*</span></label>
+              <input id="cf-name" name="name" type="text" required autocomplete="name" maxlength="120" />
+            </div>
+            <div class="kel-contact__field">
+              <label for="cf-email">E-mail <span aria-hidden="true">*</span></label>
+              <input id="cf-email" name="email" type="email" required autocomplete="email" maxlength="200" />
+            </div>
+          </div>
+
+          <div class="kel-contact__row">
+            <div class="kel-contact__field">
+              <label for="cf-phone-num">Телефон <span class="kel-contact__opt">(необязательно)</span></label>
+              <div class="kel-contact__phone">
+                <select id="cf-phone-cc" name="phone_cc" aria-label="Код страны">
+                  {TOP_COUNTRIES.map(c => (
+                    <option value={`${c.code}|${c.dial}`} selected={c.code === 'RU'} title={c.name}>
+                      {c.flag} +{c.dial} {c.code}
+                    </option>
+                  ))}
+                  <option disabled>──────────</option>
+                  {REST_COUNTRIES.map(c => (
+                    <option value={`${c.code}|${c.dial}`} title={c.name}>
+                      {c.flag} +{c.dial} {c.code}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  id="cf-phone-num"
+                  name="phone_num"
+                  type="tel"
+                  autocomplete="tel-national"
+                  inputmode="tel"
+                  maxlength="20"
+                  placeholder="912 345 6789"
+                />
+              </div>
+            </div>
+            <div class="kel-contact__field">
+              <label for="cf-topic">Тема</label>
+              <select id="cf-topic" name="topic">
+                <option value="general">Общий вопрос</option>
+                <option value="new-build">Новый проект / запрос на сборку</option>
+                <option value="quote">Запрос оценки</option>
+                <option value="partnership">Партнёрство / сотрудничество</option>
+                <option value="press">Пресса / СМИ</option>
+                <option value="technical">Сайт / технический вопрос</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="kel-contact__field">
+            <label for="cf-subject">Тема письма <span aria-hidden="true">*</span></label>
+            <input id="cf-subject" name="subject" type="text" required maxlength="200" />
+          </div>
+
+          <div class="kel-contact__field">
+            <label for="cf-message">Сообщение <span aria-hidden="true">*</span></label>
+            <textarea id="cf-message" name="message" required rows="8" maxlength="6000" placeholder="Что вы хотите построить, починить или заменить? Укажите ссылки, сроки и ограничения — это поможет оценить объём."></textarea>
+          </div>
+
+          {/* Honeypot — bots fill this; humans don't see it */}
+          <div class="kel-contact__hp" aria-hidden="true">
+            <label>Оставьте это поле пустым</label>
+            <input type="text" name="website" tabindex="-1" autocomplete="off" />
+          </div>
+
+          <div class="kel-contact__actions">
+            <button type="submit" class="kel-contact__submit">
+              <span class="kel-contact__submit-label">Отправить</span>
+              <span class="kel-contact__submit-spinner" aria-hidden="true"></span>
+            </button>
+            <p class="kel-contact__note">
+              Сообщение уходит прямо в почту инженера. Обычно отвечаем за один-два дня.
+            </p>
+          </div>
+
+          <div class="kel-contact__status" role="status" aria-live="polite"></div>
+        </form>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  function setupContactForm() {
+    const form = document.getElementById('kel-contact-form') as HTMLFormElement | null;
+    if (!form || (form as any)._wired) return;
+    (form as any)._wired = true;
+    const cmsUrl = form.dataset.cmsUrl || '';
+
+    const status = form.querySelector<HTMLDivElement>('.kel-contact__status');
+    const submit = form.querySelector<HTMLButtonElement>('.kel-contact__submit');
+
+    function setStatus(kind: 'idle' | 'ok' | 'error' | 'sending', msg: string) {
+      if (!status) return;
+      status.className = 'kel-contact__status is-' + kind;
+      status.textContent = msg;
+    }
+
+    // Strip non-digits live so the input stays clean as the user types.
+    // (Visual + the value submitted to the server both end up digits-only.)
+    const phoneNumEl = form.querySelector<HTMLInputElement>('#cf-phone-num');
+    phoneNumEl?.addEventListener('input', () => {
+      const before = phoneNumEl.value;
+      const after = before.replace(/\D+/g, '');
+      if (before !== after) {
+        const caret = (phoneNumEl.selectionStart ?? after.length) - (before.length - after.length);
+        phoneNumEl.value = after;
+        try { phoneNumEl.setSelectionRange(Math.max(0, caret), Math.max(0, caret)); } catch {}
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+      const data = Object.fromEntries(new FormData(form).entries());
+      // Honeypot — silently succeed without sending
+      if (typeof data.website === 'string' && data.website.trim() !== '') {
+        setStatus('ok', "Спасибо — сообщение отправлено.");
+        form.reset();
+        return;
+      }
+
+      const ccRaw = String(data.phone_cc || 'RU|7');
+      const dial  = (ccRaw.split('|')[1] || '7').replace(/\D+/g, '');
+      const digits = String(data.phone_num || '').replace(/\D+/g, '');
+      const phone = digits ? `+${dial}${digits}` : '';
+
+      submit?.classList.add('is-loading');
+      submit?.setAttribute('disabled', 'true');
+      setStatus('idle', '');
+
+      const overlay = openTerminalOverlay(form, setStatus, submit);
+
+      try {
+        const res = await fetch(`${cmsUrl}/contact-form/submit-stream`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+          },
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            phone,
+            subject: data.subject,
+            topic: data.topic || 'general',
+            message: data.message,
+          }),
+        });
+        if (!res.body) throw new Error('Браузер не поддерживает потоковую передачу.');
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let i;
+          while ((i = buf.indexOf('\n\n')) >= 0) {
+            const chunk = buf.slice(0, i);
+            buf = buf.slice(i + 2);
+            const dataLines = chunk
+              .split('\n')
+              .filter(l => l.startsWith('data:'))
+              .map(l => l.slice(5).replace(/^ /, ''));
+            if (!dataLines.length) continue;
+            try { overlay.handle(JSON.parse(dataLines.join('\n'))); } catch {}
+          }
+        }
+        overlay.finalizeIfNeeded();
+      } catch (err: any) {
+        overlay.handle({ type: 'log', level: 'err', text: `Сетевая ошибка: ${err?.message || err}` });
+        overlay.handle({ type: 'done', ok: false, error: 'Сетевая ошибка — попробуйте ещё раз.' });
+      }
+      // submit button is re-enabled by the overlay when the playback queue drains
+    });
+  }
+
+  type LogEvent = { type: 'log'; level: 'info' | 'ok' | 'warn' | 'err' | 'wire'; text: string };
+  type DoneEvent = { type: 'done'; ok: boolean; id?: number; error?: string };
+
+  function openTerminalOverlay(
+    form: HTMLFormElement,
+    setStatus: (k: any, m: string) => void,
+    submit: HTMLButtonElement | null,
+  ) {
+    const overlay = document.createElement('div');
+    overlay.className = 'kel-smtp-overlay';
+    overlay.innerHTML = `
+      <div class="kel-smtp-terminal" role="log" aria-label="Статус отправки" aria-live="polite">
+        <div class="kel-smtp-header">
+          <span class="kel-smtp-dot kel-smtp-dot--r"></span>
+          <span class="kel-smtp-dot kel-smtp-dot--y"></span>
+          <span class="kel-smtp-dot kel-smtp-dot--g"></span>
+          <span class="kel-smtp-title">contact-form: отправка…</span>
+          <button class="kel-smtp-close" type="button" aria-label="Закрыть" hidden>&times;</button>
+        </div>
+        <div class="kel-smtp-body"></div>
+        <div class="kel-smtp-footer">
+          <span class="kel-smtp-spinner" aria-hidden="true"></span>
+          <span class="kel-smtp-state">Работаем…</span>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => overlay.classList.add('is-open'));
+
+    const body    = overlay.querySelector('.kel-smtp-body') as HTMLDivElement;
+    const stateEl = overlay.querySelector('.kel-smtp-state') as HTMLSpanElement;
+    const footer  = overlay.querySelector('.kel-smtp-footer') as HTMLDivElement;
+    const spinner = overlay.querySelector('.kel-smtp-spinner') as HTMLSpanElement;
+    const closeBtn = overlay.querySelector('.kel-smtp-close') as HTMLButtonElement;
+    const titleEl  = overlay.querySelector('.kel-smtp-title') as HTMLSpanElement;
+    let final: DoneEvent | null = null;
+
+    const close = () => {
+      overlay.classList.remove('is-open');
+      document.body.style.overflow = '';
+      setTimeout(() => overlay.remove(), 200);
+    };
+    closeBtn.addEventListener('click', close);
+
+    function append(level: string, text: string) {
+      const line = document.createElement('div');
+      line.className = `kel-smtp-line kel-smtp-line--${level}`;
+      const marker =
+        level === 'ok'     ? '✓ '  :
+        level === 'err'    ? '✗ '  :
+        level === 'warn'   ? '⚠ '  :
+        level === 'wire'   ? '   ' :
+        level === 'stage'  ? ''    :
+        level === 'prompt' ? '$ '  :
+        level === 'sql'    ? '   ' :
+        level === 'http'   ? '   ' :
+        level === 'header' ? '   ' :
+        level === 'send'   ? '→ '  :
+        level === 'recv'   ? '← '  :
+        level === 'body'   ? '   ' :
+                              '› '  ;
+      line.textContent = marker + text;
+      body.appendChild(line);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    // Pacing — log lines drain from the queue at this cadence so a fast
+    // pipeline (Brevo ~250 ms) still plays out as a watchable terminal
+    // session over ~4-5 seconds. Stage headers get extra weight.
+    const STEP_MS_DEFAULT = 90;
+    const STEP_MS_STAGE   = 280;
+    const queue: (LogEvent | DoneEvent)[] = [];
+    let drainTimer: number | null = null;
+    let streamEnded = false;
+
+    function applyDone(evt: DoneEvent) {
+      final = evt;
+      spinner.classList.add('is-done');
+      spinner.classList.add(evt.ok ? 'is-ok' : 'is-err');
+      stateEl.textContent = evt.ok
+        ? `Сообщение доставлено (запись №${evt.id ?? '?'})`
+        : `Сохранено как №${evt.id ?? '?'}, но отправка письма не удалась: ${evt.error || 'неизвестная ошибка'}`;
+      titleEl.textContent = evt.ok ? 'contact-form: готово' : 'contact-form: ошибка';
+      closeBtn.hidden = false;
+      footer.classList.add(evt.ok ? 'is-ok' : 'is-err');
+      setStatus(evt.ok ? 'ok' : 'error', evt.ok
+        ? "Спасибо — сообщение получено. Свяжемся в ближайшее время."
+        : "Мы сохранили ваше сообщение, но не смогли отправить уведомление по почте. Команда увидит его при следующей проверке.");
+      if (evt.ok) form.reset();
+      submit?.classList.remove('is-loading');
+      submit?.removeAttribute('disabled');
+    }
+
+    function drain() {
+      const evt = queue.shift();
+      if (!evt) {
+        if (streamEnded) {
+          if (drainTimer != null) clearTimeout(drainTimer);
+          drainTimer = null;
+        } else {
+          drainTimer = window.setTimeout(drain, STEP_MS_DEFAULT);
+        }
+        return;
+      }
+      if (evt.type === 'log') {
+        append(evt.level || 'info', evt.text || '');
+        const next = evt.level === 'stage' ? STEP_MS_STAGE : STEP_MS_DEFAULT;
+        drainTimer = window.setTimeout(drain, next);
+      } else {
+        applyDone(evt);
+        drainTimer = null;
+      }
+    }
+
+    return {
+      handle(evt: LogEvent | DoneEvent) {
+        queue.push(evt);
+        if (drainTimer == null) drain();
+      },
+      finalizeIfNeeded() {
+        streamEnded = true;
+        if (!final && !queue.some(e => e.type === 'done')) {
+          queue.push({ type: 'log', level: 'warn', text: 'Поток завершён без события done' } as any);
+        }
+      },
+    };
+  }
+
+  setupContactForm();
+  document.addEventListener('astro:page-load', setupContactForm);
+</script>
+
+<style>
+  .kel-contact { color: var(--kel-text); }
+
+  .kel-contact__head {
+    background: var(--kel-bg-alt);
+    border-bottom: 1px solid var(--kel-border);
+    padding: 56px 0 36px;
+  }
+  .kel-contact__head-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 var(--kel-gutter);
+  }
+  .kel-contact__kicker {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 800;
+    color: var(--kel-accent);
+    margin-bottom: 8px;
+  }
+  .kel-contact__title {
+    font-family: var(--kel-font-display);
+    font-weight: 800;
+    font-size: clamp(36px, 6vw, 64px);
+    letter-spacing: -0.03em;
+    margin: 0 0 12px;
+    line-height: 1.05;
+  }
+  .kel-contact__lede {
+    font-size: 17px;
+    color: var(--kel-text-2);
+    max-width: 70ch;
+    margin: 0;
+  }
+  .kel-contact__lede a {
+    color: var(--kel-accent);
+    border-bottom: 1px solid rgba(56, 189, 248, .35);
+  }
+
+  .kel-contact__body {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 56px var(--kel-gutter) 96px;
+  }
+  .kel-contact__grid {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .kel-contact__grid { grid-template-columns: 1fr; gap: 28px; }
+  }
+
+  .kel-contact__aside { display: flex; flex-direction: column; gap: 16px; }
+  .kel-contact__card {
+    background: var(--kel-bg-alt);
+    border: 1px solid var(--kel-border);
+    border-radius: 10px;
+    padding: 22px 24px;
+  }
+  .kel-contact__card h3 {
+    margin: 0 0 12px;
+    font-family: var(--kel-font-display);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--kel-accent);
+  }
+  .kel-contact__card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--kel-text-2);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .kel-contact__card li {
+    padding-left: 16px;
+    position: relative;
+  }
+  .kel-contact__card li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 9px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--kel-accent);
+  }
+  .kel-contact__card p {
+    margin: 0;
+    color: var(--kel-text-2);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .kel-contact__card a {
+    color: var(--kel-accent);
+    border-bottom: 1px solid rgba(56, 189, 248, .35);
+  }
+
+  .kel-contact__form {
+    background: var(--kel-bg-alt);
+    border: 1px solid var(--kel-border);
+    border-radius: 12px;
+    padding: 32px clamp(20px, 3vw, 36px);
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, .12);
+  }
+  .kel-contact__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  @media (max-width: 620px) {
+    .kel-contact__row { grid-template-columns: 1fr; }
+  }
+  .kel-contact__field { display: flex; flex-direction: column; gap: 6px; }
+  .kel-contact__field label {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--kel-text-2);
+  }
+  .kel-contact__field label span { color: var(--kel-accent); }
+  .kel-contact__field label .kel-contact__opt {
+    color: var(--kel-text-3);
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .kel-contact__field input,
+  .kel-contact__field select,
+  .kel-contact__field textarea {
+    background: var(--kel-bg);
+    color: var(--kel-text);
+    border: 1px solid var(--kel-border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font: inherit;
+    font-size: 15px;
+    line-height: 1.4;
+    transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .kel-contact__field textarea {
+    resize: vertical;
+    min-height: 160px;
+    font-family: inherit;
+  }
+  .kel-contact__field input:focus,
+  .kel-contact__field select:focus,
+  .kel-contact__field textarea:focus {
+    outline: none;
+    border-color: var(--kel-accent);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, .18);
+  }
+  .kel-contact__field input:invalid:not(:placeholder-shown),
+  .kel-contact__field textarea:invalid:not(:placeholder-shown) {
+    border-color: rgba(255, 80, 80, .55);
+  }
+
+  /* Phone: country-code select stitched to the number input. They share
+     a border so visually they read as one field. */
+  .kel-contact__phone {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+  }
+  .kel-contact__phone select {
+    flex: 0 0 auto;
+    /* Wide enough for "🇦🇪 +971 AE" plus the chevron, but no wider — the
+       phone number field needs the rest of the row. */
+    width: 7.5em;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: 0;
+    background: var(--kel-bg-alt);
+    padding-right: 24px;
+    text-overflow: ellipsis;
+  }
+  .kel-contact__phone input {
+    flex: 1 1 auto;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    min-width: 0;
+  }
+  .kel-contact__phone select:focus,
+  .kel-contact__phone input:focus {
+    z-index: 1;
+  }
+
+  .kel-contact__hp {
+    position: absolute;
+    left: -10000px;
+    width: 1px; height: 1px;
+    overflow: hidden;
+  }
+
+  .kel-contact__actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .kel-contact__submit {
+    background: var(--kel-accent);
+    color: #0a0a0a;
+    border: 0;
+    padding: 14px 28px;
+    border-radius: 4px;
+    font: inherit;
+    font-weight: 800;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+  }
+  .kel-contact__submit:hover:not([disabled]) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(56, 189, 248, .28);
+  }
+  .kel-contact__submit[disabled] { opacity: .65; cursor: progress; }
+  .kel-contact__submit-spinner {
+    display: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,0,0,.2);
+    border-top-color: #0a0a0a;
+    animation: kel-contact-spin .7s linear infinite;
+  }
+  .kel-contact__submit.is-loading .kel-contact__submit-spinner { display: inline-block; }
+  @keyframes kel-contact-spin { to { transform: rotate(360deg); } }
+  .kel-contact__note {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--kel-text-3);
+    line-height: 1.5;
+    flex: 1;
+    min-width: 220px;
+  }
+
+  .kel-contact__status {
+    margin: 0;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .kel-contact__status.is-sending { color: var(--kel-text-2); }
+  .kel-contact__status.is-ok {
+    color: #4ad28a;
+    background: rgba(74, 210, 138, .08);
+    border: 1px solid rgba(74, 210, 138, .35);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .kel-contact__status.is-error {
+    color: #ff7171;
+    background: rgba(255, 80, 80, .08);
+    border: 1px solid rgba(255, 80, 80, .35);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+
+</style>
+
+<!-- Overlay element is created at runtime by JS, so it can't carry Astro's
+     scoping attribute. These rules must be global. -->
+<style is:global>
+  /* SMTP live-log terminal overlay */
+  .kel-smtp-overlay {
+    position: fixed; inset: 0;
+    background: rgba(4, 8, 14, 0.84);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity .18s ease;
+  }
+  .kel-smtp-overlay.is-open { opacity: 1; }
+
+  .kel-smtp-terminal {
+    width: min(760px, 100%);
+    height: min(560px, 80vh);
+    background: #060c14;
+    border: 1px solid var(--kel-border-2);
+    border-radius: var(--kel-radius-lg);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,.7);
+    font-family: var(--kel-font-mono);
+  }
+  .kel-smtp-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 11px 14px;
+    background: linear-gradient(180deg, #0e1825, #091221);
+    border-bottom: 1px solid var(--kel-border);
+  }
+  .kel-smtp-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .kel-smtp-dot--r { background: #ff5f57; }
+  .kel-smtp-dot--y { background: #febc2e; }
+  .kel-smtp-dot--g { background: #28c840; }
+  .kel-smtp-title {
+    margin-left: 10px;
+    font-size: 12.5px;
+    color: var(--kel-text-2);
+    letter-spacing: 0.02em;
+  }
+  .kel-smtp-close {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--kel-border-2);
+    color: var(--kel-text-2);
+    width: 28px; height: 28px;
+    border-radius: 4px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+  }
+  .kel-smtp-close:hover { color: var(--kel-text); border-color: var(--kel-accent); }
+
+  .kel-smtp-body {
+    flex: 1;
+    padding: 14px 18px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--kel-text-2);
+  }
+  .kel-smtp-line {
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding: 1px 0;
+    animation: kel-smtp-fadein .18s ease;
+  }
+  .kel-smtp-line--info   { color: var(--kel-text-2); }
+  .kel-smtp-line--ok     { color: var(--kel-success); }
+  .kel-smtp-line--warn   { color: var(--kel-warn); }
+  .kel-smtp-line--err    { color: var(--kel-danger); }
+  .kel-smtp-line--wire   { color: var(--kel-fiber); opacity: .8; }
+
+  /* New richer levels — terminal palette */
+  .kel-smtp-line--stage {
+    color: var(--kel-text);
+    font-weight: 700;
+    letter-spacing: .04em;
+    margin: 14px 0 4px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255, 255, 255, .12);
+  }
+  .kel-smtp-line--stage:first-child {
+    margin-top: 0;
+    border-top: none;
+    padding-top: 0;
+  }
+  .kel-smtp-line--prompt {
+    color: #67e8f9;        /* bright cyan, mac-Terminal-ish */
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .kel-smtp-line--sql {
+    color: #e879f9;        /* magenta — matches site fiber color */
+  }
+  .kel-smtp-line--http {
+    color: #fbbf24;        /* amber — HTTP request line */
+    font-weight: 600;
+  }
+  .kel-smtp-line--header {
+    color: #7dd3fc;        /* sky blue — header K: V */
+  }
+  .kel-smtp-line--send {
+    color: #cbd5e1;        /* slate — outbound payload */
+  }
+  .kel-smtp-line--recv {
+    color: #4ade80;        /* bright green — inbound response */
+  }
+  .kel-smtp-line--body {
+    color: #94a3b8;        /* dim slate — generic body lines */
+  }
+  @keyframes kel-smtp-fadein {
+    from { opacity: 0; transform: translateX(-4px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .kel-smtp-footer {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 16px;
+    background: #07101a;
+    border-top: 1px solid var(--kel-border);
+    font-size: 13px;
+  }
+  .kel-smtp-footer.is-ok    { background: rgba(16,185,129,.08); }
+  .kel-smtp-footer.is-err   { background: rgba(244,63,94,.08); }
+  .kel-smtp-spinner {
+    width: 12px; height: 12px;
+    border: 2px solid var(--kel-border-2);
+    border-top-color: var(--kel-accent);
+    border-radius: 50%;
+    animation: kel-smtp-spin .8s linear infinite;
+    flex-shrink: 0;
+  }
+  .kel-smtp-spinner.is-done {
+    animation: none;
+    border: none;
+    background: currentColor;
+  }
+  .kel-smtp-spinner.is-ok  { color: var(--kel-success); }
+  .kel-smtp-spinner.is-err { color: var(--kel-danger); }
+  .kel-smtp-state { color: var(--kel-text); }
+  @keyframes kel-smtp-spin { to { transform: rotate(360deg); } }
+</style>

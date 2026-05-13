@@ -1,0 +1,21 @@
+{
+  "name": "keltus-cms",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "directus start",
+    "bootstrap": "directus bootstrap",
+    "schema:apply": "directus schema apply ./schema/snapshot.yaml --yes",
+    "schema:snapshot": "directus schema snapshot ./schema/snapshot.yaml --yes",
+    "setup:collections": "node --env-file=.env scripts/setup-collections.mjs",
+    "setup:contact": "node --env-file=.env scripts/setup-contact-requests.mjs",
+    "setup:rebuild-webhook": "node --env-file=.env scripts/setup-rebuild-webhook.mjs",
+    "seed": "node --env-file=.env scripts/seed-content.mjs"
+  },
+  "dependencies": {
+    "directus": "^11.0.0",
+    "maxmind": "^5.0.6",
+    "mysql": "^2.18.1"
+  }
+}

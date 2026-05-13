@@ -1,0 +1,658 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import PageSpeedCompare from '../components/PageSpeedCompare.astro';
+import TestimonialCarousel from '../components/TestimonialCarousel.astro';
+import SynapticNetwork from '../components/SynapticNetwork.astro';
+import VisitorMap from '../components/VisitorMap.astro';
+import { listProjects, listTeam, listTestimonials, assetUrl } from '../lib/directus';
+import Avatar from '../components/Avatar.astro';
+
+const LOGO_SMALL = 'b5a13fb2-2974-48ac-a707-881d0bceda60';
+const LOGO_LARGE = '5b0e0f1b-6230-421a-af55-830e13f7352a';
+const logoSrc    = assetUrl(LOGO_SMALL, { width: 150, format: 'webp' });
+const logoSrcset = `${assetUrl(LOGO_SMALL, { width: 150, format: 'webp' })} 1x, ${assetUrl(LOGO_LARGE, { width: 300, format: 'webp' })} 2x`;
+
+const featuredProjects   = await listProjects({ featured: true });
+const featuredTeam       = await listTeam({ featured: true });
+const featuredQuotes     = await listTestimonials({ featured: true });
+
+// The Keltus.ru project is its own case study — pull it out of the grid
+// and render it as a full-width hero card above the rest.
+const heroProject     = featuredProjects.find(p => p.slug === 'keltus-ru') ?? null;
+const gridProjects    = featuredProjects.filter(p => p.slug !== 'keltus-ru');
+---
+
+<BaseLayout seo={{
+  title: 'Keltus — программное обеспечение на заказ, без компромиссов',
+  description: 'Веб-платформы под заказ, постквантовая криптография, интеграция ИИ и автоматизация на Go. Мы проектируем решение под задачу.',
+}}>
+
+  <img
+    class="kel-pagelogo"
+    src={logoSrc}
+    srcset={logoSrcset}
+    width="150"
+    height="150"
+    alt="Keltus"
+    decoding="async"
+    fetchpriority="high"
+  />
+
+  <!-- HERO ----------------------------------------------------- -->
+  <section class="kel-hero">
+    <div class="kel-hero__bg" aria-hidden="true">
+      <SynapticNetwork />
+    </div>
+    <div class="kel-hero__inner kel-container">
+      <span class="kel-eyebrow">Студия программного обеспечения на заказ</span>
+      <h1 class="kel-hero__title">
+        Мы не делаем<br />
+        <span class="kel-hero__strike">сайты на WordPress.</span>
+      </h1>
+      <p class="kel-hero__lede">
+        Мы проектируем решения для клиентов, которым нужно больше, чем шаблон.
+        Максимальная скорость. Постквантовое шифрование. Интеграция ИИ.
+        Автоматизация на Go. Сначала слушаем задачу — затем строим именно то,
+        что ей подходит.
+      </p>
+      <div class="kel-hero__cta">
+        <a href="/projects/" class="kel-btn kel-btn--primary">Наши работы →</a>
+        <a href="/contact/" class="kel-btn">Начать проект</a>
+      </div>
+      <ul class="kel-hero__stats" role="list">
+        <li><strong>100</strong><span>Lighthouse в каждой сборке</span></li>
+        <li><strong>Постквантовая</strong><span>криптография в продакшене</span></li>
+        <li><strong>Go</strong><span>для тяжёлого бэкенда</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- PAGESPEED ------------------------------------------------ -->
+  <section class="kel-section kel-container">
+    <header class="kel-ps-stack__intro">
+      <span class="kel-eyebrow">Почему это важно</span>
+      <h2>Скорость — это всё.</h2>
+      <p>
+        Она напрямую влияет на ранжирование, наравне с SEO. Наши системы
+        выжимают максимум из обоих факторов.
+      </p>
+    </header>
+    <div class="kel-ps-stack">
+      <PageSpeedCompare
+        eyebrow="Доказательства — переработка"
+        headline="Переделка сайта Sarah Westall."
+        caption="То же содержимое, полностью модернизированное — быстрее, красивее, удобнее, со светлой и тёмной темами. Слева — WordPress, справа — наша переработка."
+        left={{
+          label: 'WordPress (до)',
+          caption: 'sarahwestall.com',
+          scores: [34, 84, 96, 92],
+        }}
+        right={{
+          label: 'Модернизированная версия (после)',
+          caption: 'dev.gnews.cz, стейджинг',
+          scores: [99, 100, 100, 100],
+        }}
+      />
+      <p class="kel-ps-stack__cta">
+        <a href="/benchmark/" class="kel-section__more">Проверить свой сайт →</a>
+      </p>
+      <PageSpeedCompare
+        eyebrow="Доказательства — лоб в лоб"
+        headline="The New York Times против NewsTosser."
+        caption="nytimes.com против действующего сайта NewsTosser. Один прогон Lighthouse, один и тот же день."
+        left={{
+          label: 'nytimes.com',
+          caption: 'Google PageSpeed, май 2026',
+          scores: [32, 88, 54, 92],
+        }}
+        right={{
+          label: 'Сайт NewsTosser',
+          caption: 'Один из сотен в сети',
+          scores: [100, 95, 100, 100],
+        }}
+      />
+    </div>
+  </section>
+
+  <!-- AI CAPABILITY MANIFESTO ---------------------------------- -->
+  <section class="kel-section kel-container">
+    <article class="kel-manifesto">
+      <span class="kel-eyebrow">Как мы работаем</span>
+      <h2 class="kel-manifesto__title">
+        Сложные задачи — за <span class="kel-manifesto__accent">дни, а не месяцы</span>.
+      </h2>
+      <div class="kel-manifesto__body">
+        <p>
+          Постквантовая криптография. Сквозное шифрование переписки.
+          Платформы для голосования. ИИ в реальном времени. От таких задач
+          большинство студий вежливо отказывается — а мы посвятили им карьеру.
+        </p>
+        <p>
+          Новое — это темп. Когда ИИ встроен прямо в пайплайн сборки, скучные
+          80% пишутся сами: каркасы, тесты, документация, обвязка. Наши старшие
+          инженеры тратят часы на те самые 20%, которые действительно важны.
+          Работа, которая раньше занимала квартал, выходит за неделю — тот же
+          закалённый стек, те же инженеры, в разы дешевле. Софт под заказ,
+          доступный раньше только enterprise, теперь в пределах досягаемости.
+        </p>
+      </div>
+      <ul class="kel-manifesto__chips" role="list">
+        <li><strong>×5</strong><span>быстрее доставка</span></li>
+        <li><strong>Сеньоры</strong><span>с ИИ-усилением, но не вместо людей</span></li>
+        <li><strong>Удивительно</strong><span>доступно</span></li>
+      </ul>
+    </article>
+  </section>
+
+  <!-- VISITOR MAP --------------------------------------------- -->
+  <section class="kel-section kel-container">
+    <VisitorMap />
+  </section>
+
+  <!-- FEATURED PROJECTS --------------------------------------- -->
+  {featuredProjects.length > 0 && (
+    <section class="kel-section kel-container">
+      <header class="kel-section__head">
+        <span class="kel-eyebrow">Что мы построили</span>
+        <h2>Избранные проекты</h2>
+        <a href="/projects/" class="kel-section__more">Все проекты →</a>
+      </header>
+
+      {heroProject && (
+        <a href={`/projects/${heroProject.slug}/`} class="kel-herocard" aria-label={`${heroProject.name} — кейс`}>
+          <div class="kel-herocard__copy">
+            <span class="kel-herocard__eyebrow">Этот самый сайт</span>
+            <h3 class="kel-herocard__title">{heroProject.name}</h3>
+            {heroProject.tagline && <p class="kel-herocard__tagline">{heroProject.tagline}</p>}
+            {(heroProject.highlights?.length ?? 0) > 0 && (
+              <ul class="kel-herocard__chips">
+                {heroProject.highlights!.map(h => <li>{h}</li>)}
+              </ul>
+            )}
+            <span class="kel-herocard__cta">Открыть кейс →</span>
+          </div>
+          {heroProject.cover_image && (
+            <div class="kel-herocard__media">
+              <img
+                src={assetUrl(heroProject.cover_image, { width: 720, format: 'webp', quality: 82 })}
+                srcset={[480, 720, 960, 1280]
+                  .map(w => `${assetUrl(heroProject.cover_image!, { width: w, format: 'webp', quality: 82 })} ${w}w`)
+                  .join(', ')}
+                sizes="(min-width: 980px) 540px, (min-width: 820px) 50vw, 100vw"
+                alt={`${heroProject.name} — превью`}
+                loading="lazy"
+                decoding="async"
+                width="720"
+                height="389"
+              />
+            </div>
+          )}
+        </a>
+      )}
+
+      <div class="kel-grid">
+        {gridProjects.map(p => <ProjectCard project={p} />)}
+      </div>
+    </section>
+  )}
+
+  <!-- TESTIMONIALS -------------------------------------------- -->
+  {featuredQuotes.length > 0 && (
+    <section class="kel-section kel-container">
+      <header class="kel-section__head">
+        <span class="kel-eyebrow">От клиентов</span>
+        <h2>Почему они возвращаются.</h2>
+      </header>
+      <TestimonialCarousel items={featuredQuotes} />
+    </section>
+  )}
+
+  <!-- TEAM STRIP ---------------------------------------------- -->
+  {featuredTeam.length > 0 && (
+    <section class="kel-section kel-container">
+      <header class="kel-section__head">
+        <span class="kel-eyebrow">Кто строит</span>
+        <h2>Команда.</h2>
+        <a href="/team/" class="kel-section__more">Познакомиться со всеми →</a>
+      </header>
+      <div class="kel-team-grid">
+        {featuredTeam.map(m => (
+          <a href={`/team/${m.slug}/`} class="kel-team-grid__card" aria-label={`${m.name} — ${m.role ?? ''}`.trim()}>
+            <Avatar name={m.name} photoId={m.photo} size={104} />
+            <div class="kel-team-grid__body">
+              <strong>{m.name}</strong>
+              <span class="kel-team-grid__role">{m.role}</span>
+              {m.location && <span class="kel-team-grid__loc">{m.location}</span>}
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- CTA ------------------------------------------------------ -->
+  <section class="kel-section kel-container">
+    <div class="kel-cta">
+      <h2>Есть сложная задача?</h2>
+      <p>Скорость. Криптография. ИИ. Автоматизация ЧПУ. Расскажите, что
+         вам нужно — мы скажем, что действительно возможно.</p>
+      <a href="/contact/" class="kel-btn kel-btn--primary">Начать разговор →</a>
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  .kel-section { padding: 40px 0; }
+  .kel-section__head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    margin-bottom: 32px;
+    gap: 16px;
+  }
+  .kel-section__head h2 {
+    margin: 6px 0 0;
+    grid-column: 1;
+    font-size: clamp(24px, 3vw, 34px);
+  }
+  .kel-section__head .kel-eyebrow { grid-column: 1; }
+  .kel-section__more {
+    grid-column: 2;
+    grid-row: 2;
+    color: var(--kel-accent);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  @media (max-width: 620px) {
+    .kel-section__head { grid-template-columns: 1fr; }
+    .kel-section__more { grid-column: 1; grid-row: auto; }
+  }
+
+  /* Page logo — positioned absolutely from the document top so it overlays
+     the nav + hero without affecting layout flow. Only rendered on home. */
+  .kel-pagelogo {
+    position: absolute;
+    top: 5mm;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 150px;
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  /* HERO */
+  .kel-hero {
+    position: relative;
+    padding: clamp(200px, 22vw, 240px) 0 clamp(56px, 8vw, 88px);
+    overflow: hidden;
+  }
+  .kel-hero__bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(60% 50% at 20% 0%, rgba(56,189,248,0.10), transparent 70%),
+      radial-gradient(50% 50% at 90% 30%, rgba(56,189,248,0.05), transparent 70%);
+    pointer-events: none;
+  }
+  .kel-hero__inner { position: relative; }
+  .kel-hero__title {
+    font-size: clamp(40px, 7vw, 80px);
+    font-weight: 800;
+    margin: 12px 0 16px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+  .kel-hero__strike {
+    position: relative;
+    color: var(--kel-text-2);
+    text-decoration: line-through;
+    text-decoration-color: var(--kel-accent);
+    text-decoration-thickness: 4px;
+  }
+  .kel-hero__lede {
+    max-width: 62ch;
+    color: var(--kel-text-2);
+    font-size: clamp(16px, 1.5vw, 18px);
+    line-height: 1.65;
+    margin: 0 0 28px;
+  }
+  .kel-hero__cta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 56px;
+  }
+  .kel-hero__stats {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+    border-top: 1px solid var(--kel-border);
+    padding-top: 28px;
+  }
+  .kel-hero__stats li {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .kel-hero__stats strong {
+    font-family: var(--kel-font-mono);
+    color: var(--kel-text);
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    font-weight: 700;
+  }
+  .kel-hero__stats span {
+    color: var(--kel-text-3);
+    font-size: 13px;
+  }
+  @media (max-width: 720px) {
+    .kel-hero__stats { grid-template-columns: 1fr; gap: 14px; }
+  }
+
+  /* Grid for cards */
+  .kel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+  }
+
+  /* Full-width hero project card — used for the Keltus.io case study,
+     which is the site itself. Spans the entire row above the regular grid. */
+  .kel-herocard {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: clamp(20px, 4vw, 56px);
+    align-items: center;
+    padding: clamp(24px, 4vw, 40px);
+    margin-bottom: 24px;
+    border: 1px solid var(--kel-border);
+    border-radius: var(--kel-radius-lg);
+    background:
+      linear-gradient(135deg, rgba(232, 121, 249, 0.08) 0%, transparent 55%),
+      linear-gradient(225deg, rgba(56, 189, 248, 0.10) 0%, transparent 55%),
+      var(--kel-bg-alt);
+    color: var(--kel-text);
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .kel-herocard::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(60% 80% at 100% 0%, rgba(232, 121, 249, 0.10), transparent 70%);
+  }
+  .kel-herocard:hover {
+    transform: translateY(-3px);
+    border-color: var(--kel-border-2);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+    color: var(--kel-text);
+  }
+  .kel-herocard__copy { position: relative; }
+  .kel-herocard__eyebrow {
+    display: inline-block;
+    font-family: var(--kel-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--kel-accent);
+    background: var(--kel-accent-soft);
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+  }
+  .kel-herocard__title {
+    font-size: clamp(26px, 3.4vw, 36px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 10px;
+    line-height: 1.1;
+  }
+  .kel-herocard__tagline {
+    margin: 0 0 16px;
+    color: var(--kel-text-2);
+    font-size: clamp(15px, 1.4vw, 16.5px);
+    line-height: 1.55;
+    max-width: 56ch;
+  }
+  .kel-herocard__chips {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .kel-herocard__chips li {
+    font-family: var(--kel-font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--kel-text-2);
+    border: 1px solid var(--kel-border);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .kel-herocard__cta {
+    display: inline-flex;
+    align-items: center;
+    color: var(--kel-accent);
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .kel-herocard__media {
+    position: relative;
+    border-radius: var(--kel-radius-md, 10px);
+    overflow: hidden;
+    border: 1px solid var(--kel-border);
+    aspect-ratio: 16 / 9;
+    background: #0a0e14;
+  }
+  .kel-herocard__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform .4s ease;
+  }
+  .kel-herocard:hover .kel-herocard__media img { transform: scale(1.02); }
+  @media (max-width: 820px) {
+    .kel-herocard { grid-template-columns: 1fr; }
+  }
+
+  .kel-ps-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .kel-ps-stack__intro {
+    max-width: 720px;
+    margin: 0 0 28px;
+  }
+  .kel-ps-stack__intro h2 {
+    font-size: clamp(28px, 4vw, 40px);
+    margin: 8px 0 14px;
+    letter-spacing: -0.02em;
+  }
+  .kel-ps-stack__intro p {
+    margin: 0;
+    color: var(--kel-text-2);
+    font-size: clamp(15.5px, 1.4vw, 17px);
+    line-height: 1.6;
+    max-width: 60ch;
+  }
+  .kel-ps-stack__cta {
+    margin: -8px 0 -8px;
+    text-align: right;
+  }
+  .kel-ps-stack__cta a {
+    color: var(--kel-accent);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--kel-font-mono);
+  }
+
+  /* Team grid — 4 columns × 2 rows on desktop, small circle cards */
+  .kel-team-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+  }
+  @media (max-width: 900px) {
+    .kel-team-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .kel-team-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  }
+  .kel-team-grid__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 22px 14px 20px;
+    border: 1px solid var(--kel-border);
+    border-radius: var(--kel-radius-lg);
+    background: var(--kel-bg-alt);
+    color: var(--kel-text);
+    text-align: center;
+    transition: transform .2s ease, border-color .2s ease, background .2s ease;
+  }
+  .kel-team-grid__card:hover {
+    transform: translateY(-2px);
+    border-color: var(--kel-accent);
+    background: var(--kel-bg-3);
+    color: var(--kel-text);
+  }
+  .kel-team-grid__body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .kel-team-grid__body strong {
+    font-size: 15px;
+    color: var(--kel-text);
+    font-weight: 700;
+  }
+  .kel-team-grid__role {
+    color: var(--kel-accent);
+    font-family: var(--kel-font-mono);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+  .kel-team-grid__loc {
+    color: var(--kel-text-3);
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  /* CTA */
+  .kel-cta {
+    border: 1px solid var(--kel-border);
+    background:
+      radial-gradient(120% 90% at 100% 0%, rgba(56,189,248,0.10), transparent 60%),
+      var(--kel-bg-alt);
+    border-radius: var(--kel-radius-lg);
+    padding: clamp(36px, 6vw, 72px);
+    text-align: center;
+  }
+  .kel-cta h2 {
+    font-size: clamp(28px, 4vw, 42px);
+    margin: 0 0 12px;
+  }
+  .kel-cta p {
+    color: var(--kel-text-2);
+    max-width: 56ch;
+    margin: 0 auto 24px;
+    font-size: 16.5px;
+  }
+
+  /* MANIFESTO — full-width AI capability card */
+  .kel-manifesto {
+    position: relative;
+    border: 1px solid var(--kel-border-2);
+    border-radius: var(--kel-radius-lg);
+    background:
+      radial-gradient(70% 60% at 12% 0%, rgba(232,121,249,0.10), transparent 60%),
+      radial-gradient(60% 70% at 95% 100%, rgba(56,189,248,0.10), transparent 60%),
+      var(--kel-bg-alt);
+    padding: clamp(36px, 5vw, 64px) clamp(28px, 4vw, 56px);
+    overflow: hidden;
+  }
+  .kel-manifesto::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--kel-fiber), var(--kel-accent), transparent);
+    opacity: 0.7;
+  }
+  .kel-manifesto__title {
+    font-size: clamp(28px, 4.4vw, 48px);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    margin: 14px 0 28px;
+    max-width: 22ch;
+  }
+  .kel-manifesto__accent {
+    background: linear-gradient(90deg, var(--kel-fiber), var(--kel-accent));
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+            color: transparent;
+  }
+  .kel-manifesto__body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(20px, 3vw, 40px);
+    max-width: 96ch;
+  }
+  .kel-manifesto__body p {
+    margin: 0;
+    color: var(--kel-text-2);
+    font-size: clamp(15.5px, 1.4vw, 17px);
+    line-height: 1.65;
+  }
+  .kel-manifesto__body p:first-child::first-line {
+    color: var(--kel-text);
+    font-weight: 600;
+  }
+  .kel-manifesto__chips {
+    list-style: none;
+    padding: 32px 0 0;
+    margin: 32px 0 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+    border-top: 1px solid var(--kel-border);
+  }
+  .kel-manifesto__chips li {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .kel-manifesto__chips strong {
+    font-family: var(--kel-font-mono);
+    color: var(--kel-text);
+    font-size: clamp(18px, 2vw, 22px);
+    letter-spacing: -0.01em;
+    font-weight: 700;
+  }
+  .kel-manifesto__chips span {
+    color: var(--kel-text-3);
+    font-size: 13px;
+  }
+  @media (max-width: 720px) {
+    .kel-manifesto__body { grid-template-columns: 1fr; }
+    .kel-manifesto__chips { grid-template-columns: 1fr; gap: 14px; }
+  }
+</style>

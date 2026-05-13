@@ -1,0 +1,366 @@
+---
+const PUBLIC_CMS_URL = import.meta.env.PUBLIC_CMS_URL || 'https://admin.keltus.ru';
+---
+<section class="kel-vmap" aria-labelledby="vmap-h">
+  <header class="kel-section__head" style="grid-template-columns:1fr;">
+    <span class="kel-eyebrow">Прямо сейчас</span>
+    <h2 id="vmap-h">Настоящие люди читают эту страницу.</h2>
+  </header>
+  <div class="kel-vmap__frame">
+    <div class="kel-vmap__map" data-vmap data-endpoint={`${PUBLIC_CMS_URL}/api/analytics/public-map?window=60`}>
+      <object class="kel-vmap__bg" type="image/svg+xml" data="/data/world.svg" aria-hidden="true"></object>
+      <svg class="kel-vmap__dots" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <g data-vmap-fake></g>
+        <g data-vmap-real></g>
+      </svg>
+    </div>
+    <div class="kel-vmap__meta">
+      <span class="kel-vmap__pulse" aria-hidden="true"></span>
+      <span class="kel-vmap__count" data-vmap-count>—</span>
+      <span class="kel-vmap__note">активных посетителей · за 60 мин · обновляется каждые 30 с</span>
+    </div>
+  </div>
+</section>
+
+<style>
+  .kel-vmap {
+    margin: 0;
+  }
+  .kel-vmap__frame {
+    position: relative;
+    border: 1px solid var(--kel-border);
+    background:
+      radial-gradient(70% 60% at 50% 0%, rgba(56, 189, 248, 0.05), transparent 60%),
+      var(--kel-bg-alt);
+    border-radius: var(--kel-radius-lg);
+    padding: clamp(20px, 3vw, 32px);
+    overflow: hidden;
+  }
+  .kel-vmap__map {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1000 / 500;
+  }
+  .kel-vmap__bg,
+  .kel-vmap__dots {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+  }
+  .kel-vmap__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    color: var(--kel-text-3);
+    font-family: var(--kel-font-mono);
+    font-size: 12.5px;
+  }
+  .kel-vmap__pulse {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--kel-fiber);
+    box-shadow: 0 0 0 0 var(--kel-fiber);
+    animation: kel-vmap-pulse 2s ease-out infinite;
+  }
+  .kel-vmap__count {
+    color: var(--kel-text);
+    font-weight: 700;
+    font-size: 14px;
+  }
+  @keyframes kel-vmap-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(232, 121, 249, .55); }
+    80%  { box-shadow: 0 0 0 14px rgba(232, 121, 249, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(232, 121, 249, 0); }
+  }
+</style>
+
+<style is:global>
+  .kel-vmap__dot {
+    fill: var(--kel-fiber);
+    filter: drop-shadow(0 0 4px rgba(232, 121, 249, .65));
+    transition: r .4s ease;
+  }
+  .kel-vmap__dot--fake {
+    transition: opacity 1.5s ease, r .4s ease;
+  }
+  /* Neuron-style spark: a glowing halo + bright core both decay in size
+     and opacity from the moment a dot appears. Same shape as the synaptic
+     network's firing animation. */
+  .kel-vmap__spark-halo {
+    fill: var(--kel-fiber);
+    fill-opacity: 0.35;
+    animation: kel-vmap-spark-halo 1.1s ease-out forwards;
+    pointer-events: none;
+  }
+  .kel-vmap__spark-core {
+    fill: var(--kel-fiber);
+    fill-opacity: 0.95;
+    animation: kel-vmap-spark-core 0.9s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes kel-vmap-spark-halo {
+    0%   { r: 16; opacity: .55; }
+    100% { r: 6;  opacity: 0;   }
+  }
+  @keyframes kel-vmap-spark-core {
+    0%   { r: 8;   opacity: 1; }
+    100% { r: 3.5; opacity: 0; }
+  }
+</style>
+
+<script>
+  type Point = { country: string; lat: number; lon: number; hits: number };
+
+  function proj(lat: number, lon: number) {
+    return {
+      x: ((lon + 180) / 360) * 1000,
+      y: ((90 - lat) / 180) * 500,
+    };
+  }
+
+  function setup() {
+    const root = document.querySelector<HTMLElement>('[data-vmap]');
+    if (!root || (root as any)._wired) return;
+    (root as any)._wired = true;
+    const endpoint = root.dataset.endpoint!;
+    const realGroup = root.querySelector<SVGGElement>('[data-vmap-real]')!;
+    const fakeGroup = root.querySelector<SVGGElement>('[data-vmap-fake]')!;
+    const countEl   = document.querySelector<HTMLElement>('[data-vmap-count]')!;
+
+    let previousKeys = new Set<string>();
+    let timer = 0;
+    let visible = true;
+
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    function keyOf(p: Point) { return `${p.lat}:${p.lon}:${p.country}`; }
+
+    function render(points: Point[]) {
+      realGroup.innerHTML = '';
+      const currentKeys = new Set(points.map(keyOf));
+      for (const p of points) {
+        const { x, y } = proj(p.lat, p.lon);
+        const k = keyOf(p);
+        const isFresh = !previousKeys.has(k);
+        const r = Math.min(2 + Math.log2(p.hits + 1) * 1.4, 9);
+        const dot = document.createElementNS(SVG_NS, 'circle');
+        dot.setAttribute('class', 'kel-vmap__dot');
+        dot.setAttribute('cx', String(x));
+        dot.setAttribute('cy', String(y));
+        dot.setAttribute('r',  String(r));
+        const parts = [p.country, `${p.hits} ${p.hits === 1 ? 'просмотр' : 'просмотров'}`].filter(Boolean);
+        const title = document.createElementNS(SVG_NS, 'title');
+        title.textContent = parts.join(' — ');
+        dot.appendChild(title);
+        realGroup.appendChild(dot);
+        if (isFresh) addSpark(realGroup, x, y);
+      }
+      previousKeys = currentKeys;
+      updateCount();
+    }
+
+    function addSpark(parent: SVGGElement, x: number, y: number) {
+      // Halo + core mimic the synaptic network's neuron-firing flash: both
+      // shrink and fade from the moment the dot appears.
+      const halo = document.createElementNS(SVG_NS, 'circle');
+      halo.setAttribute('class', 'kel-vmap__spark-halo');
+      halo.setAttribute('cx', String(x));
+      halo.setAttribute('cy', String(y));
+      halo.setAttribute('r',  '16');
+      parent.appendChild(halo);
+      const core = document.createElementNS(SVG_NS, 'circle');
+      core.setAttribute('class', 'kel-vmap__spark-core');
+      core.setAttribute('cx', String(x));
+      core.setAttribute('cy', String(y));
+      core.setAttribute('r',  '8');
+      parent.appendChild(core);
+      setTimeout(() => { halo.remove(); core.remove(); }, 1300);
+    }
+
+    function updateCount() {
+      const real = realGroup.querySelectorAll('circle').length;
+      const fake = totalFakeDots();
+      const n = real + fake;
+      countEl.textContent = `${n} активных`;
+    }
+
+    async function poll() {
+      try {
+        const r = await fetch(endpoint, { cache: 'no-store' });
+        if (!r.ok) return;
+        const data = await r.json() as { points: Point[] };
+        render(data.points || []);
+      } catch { /* swallow — next tick */ }
+    }
+
+    // ---- Ambient fake-dot manager -------------------------------------
+    // Until real traffic is steady, keep ~4 ambient dots cycling so the
+    // map reads as alive. Each one fades in, lives 6–10s, fades out, then
+    // is replaced somewhere else.
+    const FAKE_POOL: { city: string; country: string; lat: number; lon: number }[] = [
+      { city: 'New York',     country: 'US', lat:  40.7, lon:  -74.0 },
+      { city: 'London',       country: 'UK', lat:  51.5, lon:   -0.1 },
+      { city: 'Tokyo',        country: 'JP', lat:  35.7, lon:  139.7 },
+      { city: 'Sydney',       country: 'AU', lat: -33.9, lon:  151.2 },
+      { city: 'São Paulo',    country: 'BR', lat: -23.5, lon:  -46.6 },
+      { city: 'Berlin',       country: 'DE', lat:  52.5, lon:   13.4 },
+      { city: 'Singapore',    country: 'SG', lat:   1.4, lon:  103.8 },
+      { city: 'Mumbai',       country: 'IN', lat:  19.1, lon:   72.9 },
+      { city: 'Dubai',        country: 'AE', lat:  25.2, lon:   55.3 },
+      { city: 'Toronto',      country: 'CA', lat:  43.7, lon:  -79.4 },
+      { city: 'Seoul',        country: 'KR', lat:  37.6, lon:  126.9 },
+      { city: 'Mexico City',  country: 'MX', lat:  19.4, lon:  -99.1 },
+      { city: 'Cape Town',    country: 'ZA', lat: -33.9, lon:   18.4 },
+      { city: 'Buenos Aires', country: 'AR', lat: -34.6, lon:  -58.4 },
+      { city: 'Stockholm',    country: 'SE', lat:  59.3, lon:   18.1 },
+      { city: 'Bangalore',    country: 'IN', lat:  13.0, lon:   77.6 },
+      { city: 'Lagos',        country: 'NG', lat:   6.5, lon:    3.4 },
+      { city: 'Istanbul',     country: 'TR', lat:  41.0, lon:   28.9 },
+      { city: 'Hong Kong',    country: 'HK', lat:  22.3, lon:  114.2 },
+      { city: 'Reykjavík',    country: 'IS', lat:  64.1, lon:  -21.9 },
+    ];
+    // Target count drifts in the 4–12 range; re-rolled every 25–45 s for
+    // an organic ambient feel that doesn't feel like a metronome.
+    const FAKE_FADE_MS = 1500;
+    const FAKE_LIFETIME_MIN_MS = 10_000;          // 10 s
+    const FAKE_LIFETIME_MAX_MS = 180_000;         // 3 min
+    let fakeTargetCount = 4 + Math.floor(Math.random() * 9); // 4..12
+
+    // Locations are coalesced into per-city groups so multiple visitors at
+    // the same place merge into a single bigger dot rather than overlapping
+    // identical circles. fakeRadius() grows logarithmically with the count.
+    type LocGroup = {
+      count: number;
+      dot: SVGCircleElement;
+      title: SVGTitleElement;
+      city: string;
+      country: string;
+      fadingOut: boolean;
+    };
+    const locGroups = new Map<string, LocGroup>();
+    function fakeRadius(count: number) {
+      return Math.min(3.5 + Math.log2(count) * 1.8, 10);
+    }
+    function totalFakeDots() {
+      let n = 0;
+      for (const g of locGroups.values()) if (!g.fadingOut) n += g.count;
+      return n;
+    }
+
+    function spawnFake() {
+      // No filter — duplicate locations are fine; they coalesce into one
+      // bigger dot with a higher visitor count.
+      const loc = FAKE_POOL[Math.floor(Math.random() * FAKE_POOL.length)];
+      const fk = `${loc.lat},${loc.lon}`;
+      const { x, y } = proj(loc.lat, loc.lon);
+      let group = locGroups.get(fk);
+
+      if (group && !group.fadingOut) {
+        group.count++;
+        group.dot.setAttribute('r', String(fakeRadius(group.count)));
+        group.title.textContent = `${loc.city}, ${loc.country} · ${group.count} активных`;
+        addSpark(fakeGroup, x, y);
+      } else {
+        const dot = document.createElementNS(SVG_NS, 'circle');
+        dot.setAttribute('class', 'kel-vmap__dot kel-vmap__dot--fake');
+        dot.setAttribute('cx', String(x));
+        dot.setAttribute('cy', String(y));
+        dot.setAttribute('r',  String(fakeRadius(1)));
+        dot.style.opacity = '0';
+        const t = document.createElementNS(SVG_NS, 'title');
+        t.textContent = `${loc.city}, ${loc.country}`;
+        dot.appendChild(t);
+        fakeGroup.appendChild(dot);
+        addSpark(fakeGroup, x, y);
+        requestAnimationFrame(() => { dot.style.opacity = '1'; });
+        group = { count: 1, dot, title: t, city: loc.city, country: loc.country, fadingOut: false };
+        locGroups.set(fk, group);
+      }
+      updateCount();
+
+      const lifetime = FAKE_LIFETIME_MIN_MS + Math.random() * (FAKE_LIFETIME_MAX_MS - FAKE_LIFETIME_MIN_MS);
+      setTimeout(() => {
+        const g = locGroups.get(fk);
+        if (!g) return;
+        g.count--;
+        if (g.count > 0) {
+          g.dot.setAttribute('r', String(fakeRadius(g.count)));
+          g.title.textContent = g.count === 1
+            ? `${g.city}, ${g.country}`
+            : `${g.city}, ${g.country} · ${g.count} активных`;
+          updateCount();
+        } else {
+          g.fadingOut = true;
+          g.dot.style.opacity = '0';
+          updateCount();
+          setTimeout(() => {
+            g.dot.remove();
+            locGroups.delete(fk);
+            updateCount();
+          }, FAKE_FADE_MS + 50);
+        }
+      }, lifetime);
+    }
+
+    let fakeTimer = 0;
+    let targetRollTimer = 0;
+    function rerollTarget() {
+      fakeTargetCount = 4 + Math.floor(Math.random() * 9); // 4..12
+    }
+    function startFakes() {
+      if (fakeTimer) return;
+      // Stagger the initial spawns so they don't all fade in synchronously.
+      const initial = Math.min(fakeTargetCount, FAKE_POOL.length);
+      for (let i = 0; i < initial; i++) {
+        setTimeout(spawnFake, i * 600);
+      }
+      fakeTimer = window.setInterval(() => {
+        if (!visible) return;
+        if (totalFakeDots() < fakeTargetCount) spawnFake();
+      }, 1500);
+      // Drift the target every 25–45 s so the count organically wanders
+      // through 4..12 instead of feeling like a metronome.
+      const scheduleReroll = () => {
+        targetRollTimer = window.setTimeout(() => {
+          rerollTarget();
+          scheduleReroll();
+        }, 25_000 + Math.random() * 20_000);
+      };
+      scheduleReroll();
+    }
+    function stopFakes() {
+      if (fakeTimer) clearInterval(fakeTimer);
+      fakeTimer = 0;
+      if (targetRollTimer) clearTimeout(targetRollTimer);
+      targetRollTimer = 0;
+    }
+
+    function start() {
+      if (timer) return;
+      poll();
+      timer = window.setInterval(() => { if (visible) poll(); }, 30_000);
+      startFakes();
+    }
+    function stop() {
+      if (timer) clearInterval(timer);
+      timer = 0;
+      stopFakes();
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      visible = !document.hidden;
+      if (visible) poll();
+    });
+
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) start(); else stop();
+      }
+    }, { rootMargin: '120px' });
+    io.observe(root);
+  }
+  setup();
+</script>

@@ -1,0 +1,170 @@
+---
+const path = Astro.url.pathname;
+const isActive = (href: string) =>
+  href === '/' ? path === '/' : path.startsWith(href);
+
+const links = [
+  { href: '/projects/', label: 'Проекты' },
+  { href: '/team/',     label: 'Команда' },
+  { href: '/technologies/', label: 'Технологии' },
+  { href: '/contact/',  label: 'Контакты' },
+];
+---
+
+<header class="kel-nav" data-nav>
+  <div class="kel-nav__inner kel-container">
+    <a href="/" class="kel-nav__brand" aria-label="Keltus — главная">
+      <span class="kel-nav__mark">K</span>
+      <span class="kel-nav__word">eltus</span>
+    </a>
+    <button class="kel-nav__toggle" aria-label="Открыть меню" aria-expanded="false" data-nav-toggle>
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="kel-nav__links" aria-label="Основная навигация">
+      {links.map(l => (
+        <a href={l.href} class:list={['kel-nav__link', isActive(l.href) && 'is-active']}>
+          {l.label}
+        </a>
+      ))}
+    </nav>
+  </div>
+</header>
+
+<style>
+  .kel-nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(10, 14, 20, 0.78);
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+    border-bottom: 1px solid transparent;
+    transition: border-color .2s ease, background .2s ease;
+  }
+  .kel-nav.is-scrolled {
+    background: rgba(10, 14, 20, 0.92);
+    border-bottom-color: var(--kel-border);
+  }
+  .kel-nav__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .kel-nav__brand {
+    display: inline-flex;
+    align-items: baseline;
+    color: var(--kel-text);
+    font-family: var(--kel-font-mono);
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+  }
+  .kel-nav__brand:hover { color: var(--kel-text); }
+  .kel-nav__mark {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    background: var(--kel-accent);
+    color: #04111c;
+    border-radius: 6px;
+    font-weight: 800;
+    margin-right: 6px;
+    transform: translateY(2px);
+  }
+
+  .kel-nav__links {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .kel-nav__link {
+    padding: 8px 14px;
+    border-radius: 6px;
+    color: var(--kel-text-2);
+    font-size: 14px;
+    font-weight: 500;
+    transition: color .15s ease, background .15s ease;
+  }
+  .kel-nav__link:hover {
+    color: var(--kel-text);
+    background: var(--kel-bg-3);
+  }
+  .kel-nav__link.is-active {
+    color: var(--kel-accent);
+    background: var(--kel-accent-soft);
+  }
+
+  /* Hamburger — hidden on desktop */
+  .kel-nav__toggle {
+    display: none;
+    width: 40px; height: 40px;
+    background: transparent;
+    border: 1px solid var(--kel-border);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .kel-nav__toggle span {
+    display: block;
+    width: 18px; height: 2px;
+    background: var(--kel-text);
+    border-radius: 2px;
+  }
+
+  @media (max-width: 720px) {
+    .kel-nav__toggle { display: inline-flex; }
+    .kel-nav__links {
+      position: absolute;
+      top: 64px; left: 0; right: 0;
+      flex-direction: column;
+      align-items: stretch;
+      background: var(--kel-bg-alt);
+      border-bottom: 1px solid var(--kel-border);
+      padding: 8px 0;
+      transform: translateY(-8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .15s ease, transform .15s ease;
+    }
+    .kel-nav__links.is-open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+    .kel-nav__link {
+      padding: 14px var(--kel-gutter);
+      border-radius: 0;
+    }
+  }
+</style>
+
+<script>
+  function setupNav() {
+    const nav = document.querySelector('[data-nav]') as HTMLElement | null;
+    const toggle = document.querySelector('[data-nav-toggle]') as HTMLButtonElement | null;
+    const links = document.querySelector('.kel-nav__links') as HTMLElement | null;
+    if (!nav) return;
+
+    const onScroll = () => {
+      nav.classList.toggle('is-scrolled', window.scrollY > 4);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    if (toggle && links) {
+      toggle.addEventListener('click', () => {
+        const open = links.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', String(open));
+      });
+    }
+  }
+  setupNav();
+  document.addEventListener('astro:page-load', setupNav);
+</script>

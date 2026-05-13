@@ -1,0 +1,17 @@
+---
+const PUBLIC_CMS_URL = import.meta.env.PUBLIC_CMS_URL || 'https://admin.keltus.ru';
+---
+<script define:vars={{ endpoint: `${PUBLIC_CMS_URL}/api/analytics/beacon` }}>
+  // Fire-and-forget page-view beacon. Strips query string from the path (the
+  // Go service rejects events with query strings except for /search). Uses
+  // sendBeacon for reliability on page unload; falls back to fetch.
+  try {
+    const path = location.pathname || '/';
+    const referrer = document.referrer || '';
+    const body = JSON.stringify({ path, referrer });
+    const ok = navigator.sendBeacon && navigator.sendBeacon(endpoint, new Blob([body], { type: 'application/json' }));
+    if (!ok) {
+      fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+    }
+  } catch { /* analytics must never break the page */ }
+</script>

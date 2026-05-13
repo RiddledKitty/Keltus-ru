@@ -1,0 +1,448 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageSpeedCompare from '../components/PageSpeedCompare.astro';
+
+const PUBLIC_CMS_URL = import.meta.env.PUBLIC_CMS_URL || 'https://admin.keltus.ru';
+// Keltus.io's static reference scores. Refresh these by re-running a fresh
+// PSI audit against keltus.ru when the site changes substantially.
+// Order: Performance, Accessibility, Best Practices, SEO.
+const KEL_SCORES: [number, number, number, number] = [100, 97, 100, 100];
+---
+<BaseLayout seo={{
+  title: 'Насколько быстрый ваш сайт? — бенчмарк Keltus',
+  description: 'Вставьте любой URL — мы прогоним по нему настоящий Google Lighthouse. Покажем, как сайт смотрится рядом с keltus.ru.',
+}}>
+  <section class="kel-bench">
+    <div class="kel-container">
+      <header class="kel-bench__head">
+        <span class="kel-eyebrow">Доказательства — ваша очередь</span>
+        <h1>Насколько быстрый <span class="kel-bench__accent">ваш</span> сайт?</h1>
+        <p class="kel-bench__lede">
+          Вставьте любой URL. Мы прогоним настоящий аудит Google Lighthouse в их облаке
+          и поставим результат рядом с keltus.ru. Занимает около 30 секунд. Без логина,
+          без захвата e-mail, без навязчивости.
+        </p>
+      </header>
+
+      <form id="kel-bench-form" class="kel-bench__form" data-cms-url={PUBLIC_CMS_URL}>
+        <label class="kel-bench__label" for="bench-url">URL для аудита</label>
+        <div class="kel-bench__row">
+          <div class="kel-bench__url-input">
+            <span class="kel-bench__prefix" aria-hidden="true">https://</span>
+            <input
+              id="bench-url"
+              name="url"
+              type="text"
+              inputmode="url"
+              placeholder="example.com"
+              required
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+          <button type="submit" class="kel-bench__submit">
+            <span class="kel-bench__submit-label">Запустить аудит</span>
+            <span class="kel-bench__submit-spinner" aria-hidden="true"></span>
+          </button>
+        </div>
+        <p class="kel-bench__hint">Попробуйте свой сайт, сайт конкурента или — конечно — keltus.ru. Никакой подкрутки в нашу пользу.</p>
+      </form>
+
+      <div id="kel-bench-result" class="kel-bench__result" hidden>
+        <!-- Populated by JS with a <PageSpeedCompare> equivalent -->
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script define:vars={{ kelScores: KEL_SCORES }}>
+  // Shared with contact.astro's overlay — duplicated here for now; will
+  // extract if a third surface ever needs it.
+  function setupBenchmark() {
+    const form = document.getElementById('kel-bench-form');
+    if (!form || form._wired) return;
+    form._wired = true;
+    const cmsUrl = form.dataset.cmsUrl || '';
+    const submit = form.querySelector('.kel-bench__submit');
+    const result = document.getElementById('kel-bench-result');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+      const data = Object.fromEntries(new FormData(form).entries());
+      let url = String(data.url || '').trim();
+      if (!url) return;
+      // Friendly: people type "example.com" — strip any leading scheme they
+      // happened to paste and re-add https:// uniformly.
+      url = url.replace(/^https?:\/\//i, '');
+      url = `https://${url}`;
+
+      submit.classList.add('is-loading');
+      submit.setAttribute('disabled', 'true');
+      if (result) result.hidden = true;
+
+      const overlay = openTerminalOverlay(submit, (ok, payload) => {
+        if (ok && payload && payload.scores) {
+          renderResult(url, payload.scores, payload.vitals || {});
+        }
+      });
+
+      try {
+        const res = await fetch(`${cmsUrl}/pagespeed/run-stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+          body: JSON.stringify({ url }),
+        });
+        if (!res.body) throw new Error('Браузер не поддерживает потоковую передачу.');
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let i;
+          while ((i = buf.indexOf('\n\n')) >= 0) {
+            const chunk = buf.slice(0, i);
+            buf = buf.slice(i + 2);
+            const lines = chunk.split('\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).replace(/^ /, ''));
+            if (!lines.length) continue;
+            try { overlay.handle(JSON.parse(lines.join('\n'))); } catch {}
+          }
+        }
+        overlay.finalizeIfNeeded();
+      } catch (err) {
+        overlay.handle({ type: 'log', level: 'err', text: `Сетевая ошибка: ${err.message || err}` });
+        overlay.handle({ type: 'done', ok: false, error: 'Сетевая ошибка — попробуйте ещё раз.' });
+      }
+    });
+
+    function renderResult(url, theirScores, vitals) {
+      if (!result) return;
+      result.innerHTML = '';
+      const target = new URL(url).hostname;
+      // Hand-build the same structure as PageSpeedCompare. Inline so we don't
+      // need a hydrated framework component.
+      const metricLabels = ['Производительность','Доступность','Лучшие практики','SEO'];
+      const tone = (v) => v >= 90 ? 'good' : v >= 50 ? 'avg' : 'bad';
+      const card = (label, caption, scores, badge) => `
+        <div class="kel-ps__card${badge ? ' kel-ps__card--right' : ''}">
+          <div class="kel-ps__card-head">
+            <h3>${label}</h3>
+            <p>${caption}</p>
+          </div>
+          <div class="kel-ps__rings">
+            ${scores.map((v, i) => `
+              <div class="kel-ps__ring is-${tone(v)}">
+                <div class="kel-ps__ring-circle">
+                  <svg viewBox="0 0 56 56">
+                    <circle class="kel-ps__ring-track" cx="28" cy="28" r="22"/>
+                    <circle class="kel-ps__ring-arc"   cx="28" cy="28" r="22"
+                            stroke-dasharray="${(2*Math.PI*22).toFixed(2)}"
+                            stroke-dashoffset="${(2*Math.PI*22*(1-Math.max(0,Math.min(100,v))/100)).toFixed(2)}"/>
+                  </svg>
+                  <div class="kel-ps__ring-val">${v}</div>
+                </div>
+                <span class="kel-ps__ring-label">${metricLabels[i]}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      // Click-to-open popover using the native HTML Popover API. Browser
+      // handles open/close/Esc/outside-click for free — no JS toggling.
+      const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+      const tip = (k, label, body) =>
+        `<button type="button" class="kel-bench__metric" popovertarget="kel-tip-${k}" aria-label="${esc(label)}: ${esc(body)}">${label}</button>` +
+        `<div id="kel-tip-${k}" popover="auto" class="kel-bench__metric-pop"><strong>${esc(label)}</strong><br>${esc(body)}</div>`;
+      const vitalsLine = vitals.lcp
+        ? `${tip('lcp', 'LCP', 'Largest Contentful Paint — момент, когда крупнейший видимый элемент закончил загрузку. Хорошо: меньше 2,5 с.')} ${vitals.lcp}` +
+          ` · ${tip('tbt', 'TBT', 'Total Blocking Time — суммарное время блокировки главного потока между First Contentful Paint и интерактивностью. Хорошо: меньше 200 мс.')} ${vitals.tbt}` +
+          ` · ${tip('cls', 'CLS', 'Cumulative Layout Shift — насколько страница «прыгает» при загрузке. Хорошо: меньше 0,1.')} ${vitals.cls}` +
+          ` · ${tip('fcp', 'FCP', 'First Contentful Paint — момент, когда появился первый текст или картинка. Хорошо: меньше 1,8 с.')} ${vitals.fcp}`
+        : '';
+      result.innerHTML = `
+        <div class="kel-ps">
+          <header class="kel-ps__head">
+            <span class="kel-eyebrow">Результат</span>
+            <h2>${target} против keltus.ru.</h2>
+            ${vitalsLine ? `<p class="kel-bench__vitals">${vitalsLine}</p>` : ''}
+          </header>
+          <div class="kel-ps__cards">
+            ${card(target, 'Google PageSpeed Insights · десктоп', theirScores, false)}
+            ${card('keltus.ru', 'Тот же аудит, тот же день', kelScores, true)}
+          </div>
+        </div>
+      `;
+      result.hidden = false;
+      result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  // ---------- Terminal overlay (duplicated from contact.astro) -------------
+  function openTerminalOverlay(submit, onDone) {
+    const overlay = document.createElement('div');
+    overlay.className = 'kel-smtp-overlay';
+    overlay.innerHTML = `
+      <div class="kel-smtp-terminal" role="log" aria-label="Ход аудита" aria-live="polite">
+        <div class="kel-smtp-header">
+          <span class="kel-smtp-dot kel-smtp-dot--r"></span>
+          <span class="kel-smtp-dot kel-smtp-dot--y"></span>
+          <span class="kel-smtp-dot kel-smtp-dot--g"></span>
+          <span class="kel-smtp-title">pagespeed: аудит…</span>
+          <button class="kel-smtp-close" type="button" aria-label="Закрыть" hidden>&times;</button>
+        </div>
+        <div class="kel-smtp-body"></div>
+        <div class="kel-smtp-footer">
+          <span class="kel-smtp-spinner" aria-hidden="true"></span>
+          <span class="kel-smtp-state">Работаем…</span>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => overlay.classList.add('is-open'));
+
+    const body    = overlay.querySelector('.kel-smtp-body');
+    const stateEl = overlay.querySelector('.kel-smtp-state');
+    const footer  = overlay.querySelector('.kel-smtp-footer');
+    const spinner = overlay.querySelector('.kel-smtp-spinner');
+    const closeBtn = overlay.querySelector('.kel-smtp-close');
+    const titleEl  = overlay.querySelector('.kel-smtp-title');
+
+    const close = () => {
+      overlay.classList.remove('is-open');
+      document.body.style.overflow = '';
+      setTimeout(() => overlay.remove(), 200);
+    };
+    closeBtn.addEventListener('click', close);
+
+    function append(level, text) {
+      const line = document.createElement('div');
+      line.className = `kel-smtp-line kel-smtp-line--${level}`;
+      const marker =
+        level === 'ok'     ? '✓ '  :
+        level === 'err'    ? '✗ '  :
+        level === 'warn'   ? '⚠ '  :
+        level === 'wire'   ? '   ' :
+        level === 'stage'  ? ''    :
+        level === 'prompt' ? '$ '  :
+        level === 'sql'    ? '   ' :
+        level === 'http'   ? '   ' :
+        level === 'header' ? '   ' :
+        level === 'send'   ? '→ '  :
+        level === 'recv'   ? '← '  :
+        level === 'body'   ? '   ' : '› ';
+      line.textContent = marker + text;
+      body.appendChild(line);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    const STEP_MS_DEFAULT = 90;
+    const STEP_MS_STAGE   = 280;
+    const queue = [];
+    let drainTimer = null;
+    let streamEnded = false;
+    let final = null;
+
+    function applyDone(evt) {
+      final = evt;
+      spinner.classList.add('is-done');
+      spinner.classList.add(evt.ok ? 'is-ok' : 'is-err');
+      stateEl.textContent = evt.ok
+        ? `Аудит завершён — производительность ${(evt.scores && evt.scores[0]) || '?'}/100`
+        : `Аудит не удался: ${evt.error || 'неизвестная ошибка'}`;
+      titleEl.textContent = evt.ok ? 'pagespeed: готово' : 'pagespeed: ошибка';
+      closeBtn.hidden = false;
+      footer.classList.add(evt.ok ? 'is-ok' : 'is-err');
+      submit.classList.remove('is-loading');
+      submit.removeAttribute('disabled');
+      try { onDone(evt.ok, evt); } catch (_) {}
+    }
+
+    function drain() {
+      const evt = queue.shift();
+      if (!evt) {
+        if (streamEnded) { if (drainTimer) clearTimeout(drainTimer); drainTimer = null; }
+        else drainTimer = setTimeout(drain, STEP_MS_DEFAULT);
+        return;
+      }
+      if (evt.type === 'log') {
+        append(evt.level || 'info', evt.text || '');
+        const next = evt.level === 'stage' ? STEP_MS_STAGE : STEP_MS_DEFAULT;
+        drainTimer = setTimeout(drain, next);
+      } else {
+        applyDone(evt);
+        drainTimer = null;
+      }
+    }
+
+    return {
+      handle(evt) {
+        queue.push(evt);
+        if (drainTimer == null) drain();
+      },
+      finalizeIfNeeded() {
+        streamEnded = true;
+        if (!final && !queue.some(e => e.type === 'done')) {
+          queue.push({ type: 'log', level: 'warn', text: 'Поток завершён без события done' });
+        }
+      },
+    };
+  }
+
+  setupBenchmark();
+</script>
+
+<style>
+  .kel-bench { padding: clamp(72px, 10vw, 120px) 0 80px; }
+  .kel-bench__head {
+    max-width: 760px;
+    margin: 0 auto 40px;
+    text-align: center;
+  }
+  .kel-bench__head h1 {
+    font-size: clamp(40px, 6vw, 64px);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin: 14px 0 18px;
+  }
+  .kel-bench__accent {
+    background: linear-gradient(90deg, var(--kel-fiber), var(--kel-accent));
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+            color: transparent;
+  }
+  .kel-bench__lede {
+    color: var(--kel-text-2);
+    font-size: clamp(15px, 1.4vw, 17px);
+    line-height: 1.6;
+    max-width: 60ch;
+    margin: 0 auto;
+  }
+  .kel-bench__form {
+    max-width: 640px;
+    margin: 0 auto 56px;
+  }
+  .kel-bench__label {
+    display: block;
+    font-family: var(--kel-font-mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--kel-text-3);
+    margin-bottom: 8px;
+  }
+  .kel-bench__row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .kel-bench__url-input {
+    display: flex;
+    align-items: stretch;
+    flex: 1 1 320px;
+    background: var(--kel-bg-alt);
+    border: 1px solid var(--kel-border-2);
+    border-radius: var(--kel-radius);
+    overflow: hidden;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .kel-bench__url-input:focus-within {
+    border-color: var(--kel-accent);
+    box-shadow: 0 0 0 3px var(--kel-accent-soft);
+  }
+  .kel-bench__prefix {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 14px;
+    color: var(--kel-text-3);
+    font-family: var(--kel-font-mono);
+    font-size: 15.5px;
+    user-select: none;
+    background: var(--kel-bg-3);
+    border-right: 1px solid var(--kel-border);
+    flex-shrink: 0;
+  }
+  .kel-bench__row input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    color: var(--kel-text);
+    padding: 14px 16px;
+    font-size: 15.5px;
+    font-family: var(--kel-font-mono);
+  }
+  .kel-bench__row input:focus { outline: none; }
+  .kel-bench__submit {
+    background: var(--kel-accent);
+    color: #04111c;
+    border: none;
+    border-radius: var(--kel-radius);
+    padding: 14px 22px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    position: relative;
+    transition: background .15s ease, transform .15s ease;
+  }
+  .kel-bench__submit:hover { background: var(--kel-accent-2); transform: translateY(-1px); }
+  .kel-bench__submit[disabled] { opacity: 0.6; cursor: progress; transform: none; }
+  .kel-bench__submit-spinner { display: none; }
+  .kel-bench__hint {
+    margin: 12px 0 0;
+    color: var(--kel-text-3);
+    font-size: 13px;
+  }
+  .kel-bench__vitals {
+    margin-top: 10px;
+    font-family: var(--kel-font-mono);
+    font-size: 12.5px;
+    color: var(--kel-text-3);
+  }
+  .kel-bench__metric {
+    background: var(--kel-bg-3);
+    color: var(--kel-text-2);
+    border: 1px solid var(--kel-border-2);
+    border-radius: 4px;
+    padding: 1px 6px 2px;
+    font-family: var(--kel-font-mono);
+    font-size: 11.5px;
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .kel-bench__metric:hover,
+  .kel-bench__metric:focus-visible {
+    color: var(--kel-accent);
+    border-color: var(--kel-accent);
+    outline: none;
+  }
+  .kel-bench__metric-pop {
+    margin: 0; padding: 14px 16px;
+    max-width: 320px;
+    background: #060c14;
+    border: 1px solid var(--kel-border-2);
+    border-radius: var(--kel-radius);
+    box-shadow: 0 16px 48px rgba(0,0,0,.6);
+    color: var(--kel-text-2);
+    font-family: var(--kel-font-sans);
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .kel-bench__metric-pop strong {
+    color: var(--kel-text);
+    font-family: var(--kel-font-mono);
+    font-size: 12.5px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+  .kel-bench__metric-pop::backdrop {
+    background: rgba(4, 8, 14, .35);
+    backdrop-filter: blur(1px);
+  }
+  .kel-bench__result { margin-top: 40px; }
+</style>

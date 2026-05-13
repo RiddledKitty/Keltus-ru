@@ -1,0 +1,98 @@
+# Example nginx config for keltus.ru + admin.keltus.ru.
+#
+# Production layout:
+#   keltus.ru / www.keltus.ru  → static Astro build under /var/www/keltus.ru/dist
+#   admin.keltus.ru            → Directus on 127.0.0.1:8057 + analytics on 4330
+#
+# Port notes: 8055 and 4328 are reserved by SarahSite on this host — keltus
+# uses 8057 (Directus) and 4330 (analytics) to avoid collision.
+#
+# TLS via certbot is assumed. Two certificates (one per server_name),
+# OR a single cert with both names — your call.
+
+# --- Public site -------------------------------------------------------
+server {
+  listen 80;
+  listen [::]:80;
+  server_name keltus.ru www.keltus.ru;
+  return 301 https://keltus.ru$request_uri;
+}
+
+server {
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
+  server_name www.keltus.ru;
+  ssl_certificate     /etc/letsencrypt/live/keltus.ru/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/keltus.ru/privkey.pem;
+  return 301 https://keltus.ru$request_uri;
+}
+
+server {
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
+  server_name keltus.ru;
+
+  ssl_certificate     /etc/letsencrypt/live/keltus.ru/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/keltus.ru/privkey.pem;
+
+  root /var/www/keltus.ru/dist;
+  index index.html;
+
+  # Long cache for hashed assets, short for HTML.
+  location ~* \.(js|css|png|jpg|jpeg|gif|webp|avif|svg|woff2)$ {
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    try_files $uri =404;
+  }
+  location / {
+    add_header Cache-Control "public, max-age=300, must-revalidate";
+    try_files $uri $uri/ $uri.html =404;
+  }
+
+  # GZIP / brotli for HTML + JSON. Tune as you like.
+  gzip on;
+  gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+}
+
+# --- Admin / Directus / Analytics --------------------------------------
+server {
+  listen 80;
+  listen [::]:80;
+  server_name admin.keltus.ru;
+  return 301 https://admin.keltus.ru$request_uri;
+}
+
+server {
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
+  server_name admin.keltus.ru;
+
+  ssl_certificate     /etc/letsencrypt/live/admin.keltus.ru/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/admin.keltus.ru/privkey.pem;
+
+  # Allow larger uploads for image/file management
+  client_max_body_size 100m;
+
+  # Analytics Go service (the Directus extension hits this same-origin
+  # via the user's session cookie; the public beacon endpoint is open).
+  location /api/analytics/ {
+    proxy_pass http://127.0.0.1:4330/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP $remote_addr;
+  }
+
+  # Everything else → Directus (including /contact-form/submit, /assets/*,
+  # /items/*, the admin UI, etc.).
+  location / {
+    proxy_pass http://127.0.0.1:8055;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_buffering off;
+  }
+}

@@ -1,0 +1,93 @@
+---
+/**
+ * Circular avatar with photo-or-initials fallback.
+ *
+ * If `photoId` is set, renders an <img> from Directus. Otherwise renders
+ * the person's initials inside a cyan-tinted circle — so missing photos
+ * look intentional instead of broken.
+ */
+
+import { assetUrl } from '../lib/directus';
+
+interface Props {
+  name: string;
+  photoId?: string | null;
+  size?: number;     // px diameter — defaults to 96
+  alt?: string;
+}
+
+const { name, photoId, size = 96, alt } = Astro.props;
+
+function initials(s: string): string {
+  const parts = s.trim().split(/\s+/);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+const initialsText = initials(name);
+const photoUrl = photoId
+  ? assetUrl(photoId, { width: size, height: size, fit: 'cover', format: 'webp' })
+  : '';
+const photoSrcset = photoId
+  ? [size, size * 2]
+      .map(w => `${assetUrl(photoId, { width: w, height: w, fit: 'cover', format: 'webp' })} ${w}w`)
+      .join(', ')
+  : '';
+const dim = `${size}px`;
+const fontSize = `${Math.round(size * 0.34)}px`;
+---
+
+<span
+  class="kel-avatar"
+  style={`width:${dim};height:${dim};font-size:${fontSize};`}
+  aria-hidden={alt ? undefined : 'true'}
+>
+  {photoUrl ? (
+    <img
+      src={photoUrl}
+      srcset={photoSrcset}
+      sizes={`${size}px`}
+      alt={alt ?? name}
+      width={size}
+      height={size}
+      loading="lazy"
+      decoding="async"
+    />
+  ) : (
+    <span class="kel-avatar__initials" aria-hidden="true">{initialsText}</span>
+  )}
+</span>
+
+<style>
+  .kel-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid var(--kel-border-2);
+    background:
+      radial-gradient(70% 70% at 30% 25%, rgba(56, 189, 248, 0.22), rgba(56, 189, 248, 0.05) 70%),
+      var(--kel-bg-3);
+    color: var(--kel-accent);
+    font-family: var(--kel-font-mono);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .kel-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .kel-avatar__initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+</style>

@@ -1,0 +1,181 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Avatar from '../components/Avatar.astro';
+import { listTeam } from '../lib/directus';
+
+const team = await listTeam();
+---
+
+<BaseLayout seo={{
+  title: 'Команда — Keltus',
+  description: 'Те, кто проектирует и строит в Keltus — восемь специалистов в Остине, Берлине, Брно, Праге, Токио, Тель-Авиве, Белграде и Хельсинки.',
+}}>
+  <section class="kel-page-head">
+    <div class="kel-container">
+      <span class="kel-eyebrow">Команда</span>
+      <h1>Кто строит.</h1>
+      <p>Маленькая, очень узкоспециализированная команда в восьми городах. Мы предпочитаем быть отличными
+         в нескольких вещах, а не посредственными во всём — так что это вся команда, а не подборка.</p>
+    </div>
+  </section>
+
+  <section class="kel-section kel-container">
+    {team.length > 0 ? (
+      <div class="kel-team-list">
+        {team.map(m => (
+          <article class="kel-team-card">
+            <a href={`/team/${m.slug}/`} class="kel-team-card__avatar" aria-label={`Подробнее о ${m.name}`}>
+              <Avatar name={m.name} photoId={m.photo} size={168} />
+            </a>
+            <div class="kel-team-card__body">
+              <header class="kel-team-card__head">
+                <h2>
+                  <a href={`/team/${m.slug}/`}>{m.name}</a>
+                </h2>
+                <p class="kel-team-card__role">{m.role}</p>
+                {m.location && (
+                  <p class="kel-team-card__loc">
+                    <span aria-hidden="true">📍</span> {m.location}
+                  </p>
+                )}
+              </header>
+              {m.bio && <p class="kel-team-card__bio">{m.bio}</p>}
+              <footer class="kel-team-card__foot">
+                <a href={`/team/${m.slug}/`} class="kel-team-card__more">Полная биография →</a>
+                {(m.socials?.length ?? 0) > 0 && (
+                  <ul class="kel-team-card__socials">
+                    {m.socials!.map(s => (
+                      <li>
+                        <a href={s.url} rel="noopener" target="_blank">{s.label}</a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </footer>
+            </div>
+          </article>
+        ))}
+      </div>
+    ) : (
+      <p class="kel-empty">Страница команды собирается — зайдите чуть позже.</p>
+    )}
+  </section>
+</BaseLayout>
+
+<style>
+  .kel-page-head {
+    padding: clamp(72px, 10vw, 120px) 0 clamp(40px, 6vw, 64px);
+    border-bottom: 1px solid var(--kel-border);
+    background:
+      radial-gradient(50% 60% at 0% 0%, rgba(56,189,248,0.08), transparent 70%),
+      var(--kel-bg);
+  }
+  .kel-page-head h1 {
+    font-size: clamp(36px, 6vw, 64px);
+    margin: 10px 0 16px;
+    letter-spacing: -0.03em;
+  }
+  .kel-page-head p {
+    color: var(--kel-text-2);
+    max-width: 64ch;
+    font-size: 17px;
+    margin: 0;
+  }
+  .kel-section { padding: 64px 0 96px; }
+
+  .kel-team-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .kel-team-card {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 32px;
+    align-items: start;
+    padding: 28px clamp(20px, 3vw, 36px);
+    background: var(--kel-bg-alt);
+    border: 1px solid var(--kel-border);
+    border-radius: var(--kel-radius-lg);
+    transition: border-color .15s ease;
+  }
+  .kel-team-card:hover { border-color: var(--kel-border-2); }
+  @media (max-width: 720px) {
+    .kel-team-card {
+      grid-template-columns: 1fr;
+      gap: 18px;
+      text-align: left;
+    }
+  }
+  .kel-team-card__avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .kel-team-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .kel-team-card__head h2 {
+    margin: 0 0 4px;
+    font-size: clamp(22px, 2.4vw, 28px);
+    letter-spacing: -0.02em;
+  }
+  .kel-team-card__head h2 a {
+    color: var(--kel-text);
+  }
+  .kel-team-card__head h2 a:hover { color: var(--kel-accent); }
+  .kel-team-card__role {
+    margin: 0;
+    color: var(--kel-accent);
+    font-family: var(--kel-font-mono);
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .kel-team-card__loc {
+    margin: 4px 0 0;
+    color: var(--kel-text-3);
+    font-size: 13px;
+  }
+  .kel-team-card__bio {
+    margin: 0;
+    color: var(--kel-text-2);
+    font-size: 15.5px;
+    line-height: 1.65;
+    max-width: 70ch;
+  }
+  .kel-team-card__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 4px;
+  }
+  .kel-team-card__more {
+    color: var(--kel-accent);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .kel-team-card__socials {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 14px;
+  }
+  .kel-team-card__socials a {
+    font-family: var(--kel-font-mono);
+    font-size: 12.5px;
+    color: var(--kel-text-2);
+  }
+  .kel-team-card__socials a:hover { color: var(--kel-accent); }
+
+  .kel-empty {
+    color: var(--kel-text-2);
+    text-align: center;
+    padding: 80px 0;
+  }
+</style>

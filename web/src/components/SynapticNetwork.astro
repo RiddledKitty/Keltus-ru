@@ -1,0 +1,219 @@
+---
+// Ambient synaptic network for the hero background. ~60 nodes (26 on mobile),
+// ~1 firing/sec, cascades with 22% probability. Paints behind the headline via
+// a radial mask so the H1 keeps its breathing room.
+---
+<canvas class="kel-synapse" aria-hidden="true"></canvas>
+
+<style>
+  .kel-synapse {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0.85;
+    pointer-events: none;
+    -webkit-mask: radial-gradient(ellipse 55% 60% at 28% 48%, transparent 0%, transparent 28%, black 78%);
+            mask: radial-gradient(ellipse 55% 60% at 28% 48%, transparent 0%, transparent 28%, black 78%);
+  }
+</style>
+
+<script>
+  const canvas = document.querySelector<HTMLCanvasElement>('canvas.kel-synapse');
+  // Defer the whole setup until the browser is idle so it doesn't compete with LCP.
+  const idle = (window as any).requestIdleCallback as
+    | ((cb: () => void, opts?: { timeout?: number }) => number)
+    | undefined;
+  const schedule = idle
+    ? (cb: () => void) => idle(cb, { timeout: 2000 })
+    : (cb: () => void) => setTimeout(cb, 200);
+  if (canvas) schedule(() => {
+    const ctx = canvas.getContext('2d', { alpha: true })!;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const mobile = matchMedia('(max-width: 640px)').matches;
+
+    const NODES = mobile ? 26 : 60;
+    const NEIGHBORS = 3;
+    const FIRE_MS = 625;
+    const PULSE_MS = 600;
+    const DECAY_MS = 900;
+
+    const cssVar = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const hexRgb = (hex: string) => {
+      const h = hex.replace('#', '');
+      return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)] as const;
+    };
+    const [ar, ag, ab] = hexRgb(cssVar('--kel-accent') || '#38bdf8');
+    const [dr, dg, db] = hexRgb(cssVar('--kel-text-2') || '#9aa6b8');
+    const [mr, mg, mb] = hexRgb(cssVar('--kel-fiber') || '#e879f9');
+    const acc = (a: number) => `rgba(${ar},${ag},${ab},${a})`;
+    const dim = (a: number) => `rgba(${dr},${dg},${db},${a})`;
+    const mag = (a: number) => `rgba(${mr},${mg},${mb},${a})`;
+
+    let w = 0, h = 0;
+    let nodes: { x: number; y: number; firedAt: number; lastWave: number }[] = [];
+    let neighbors: number[][] = [];
+    let edges: [number, number][] = [];
+    let pulses: { from: number; to: number; t0: number; wave: number }[] = [];
+    let rafId = 0;
+    let lastFire = 0;
+    let waveCounter = 0;
+    let visible = true;
+
+    function resize() {
+      const r = canvas!.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = r.width;
+      h = r.height;
+      canvas!.width = w * dpr;
+      canvas!.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      layout();
+    }
+
+    function layout() {
+      nodes = [];
+      const margin = 16;
+      const cube = (v: number) =>
+        v < 0.5 ? 0.5 * Math.pow(2 * v, 1.5) : 1 - 0.5 * Math.pow(2 - 2 * v, 1.5);
+      for (let i = 0; i < NODES; i++) {
+        const x = margin + (w - 2 * margin) * cube(Math.random());
+        const y = margin + (h - 2 * margin) * Math.random();
+        nodes.push({ x, y, firedAt: -1e6, lastWave: -1 });
+      }
+      const adj: Set<number>[] = nodes.map(() => new Set());
+      for (let i = 0; i < nodes.length; i++) {
+        const dists = nodes
+          .map((n, j) => ({ j, d: (n.x - nodes[i].x) ** 2 + (n.y - nodes[i].y) ** 2 }))
+          .filter((p) => p.j !== i)
+          .sort((a, b) => a.d - b.d)
+          .slice(0, NEIGHBORS);
+        for (const { j } of dists) {
+          adj[i].add(j);
+          adj[j].add(i);
+        }
+      }
+      neighbors = adj.map((s) => [...s]);
+      edges = [];
+      for (let i = 0; i < neighbors.length; i++) {
+        for (const j of neighbors[i]) if (i < j) edges.push([i, j]);
+      }
+    }
+
+    function fire(idx: number, now: number, sourceIdx: number, wave: number) {
+      const n = nodes[idx];
+      if (n.lastWave === wave) return;
+      n.lastWave = wave;
+      n.firedAt = now;
+      for (const t of neighbors[idx]) {
+        if (t === sourceIdx) continue;
+        pulses.push({ from: idx, to: t, t0: now, wave });
+      }
+    }
+
+    function draw(now: number) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.lineWidth = 1.2;
+      ctx.lineCap = 'round';
+      for (const [a, b] of edges) {
+        const na = nodes[a], nb = nodes[b];
+        ctx.strokeStyle = mag(0.32);
+        ctx.beginPath();
+        ctx.moveTo(na.x, na.y);
+        ctx.lineTo(nb.x, nb.y);
+        ctx.stroke();
+      }
+      for (const n of nodes) {
+        const age = now - n.firedAt;
+        if (age < DECAY_MS) {
+          const t = age / DECAY_MS;
+          const radius = 4.5 - 2.8 * t;
+          const alpha = (1 - t) * 0.95;
+          ctx.fillStyle = acc(alpha * 0.35);
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, radius * 2.6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = acc(alpha);
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = dim(0.7);
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, 1.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      const TRAIL = 0.18;
+      pulses = pulses.filter((p) => {
+        const t = (now - p.t0) / PULSE_MS;
+        if (t >= 1) {
+          fire(p.to, now, p.from, p.wave);
+          return false;
+        }
+        const na = nodes[p.from], nb = nodes[p.to];
+        const dx = nb.x - na.x, dy = nb.y - na.y;
+        const tHead = t;
+        const tTail = Math.max(0, t - TRAIL);
+        const hx = na.x + dx * tHead, hy = na.y + dy * tHead;
+        const tx = na.x + dx * tTail, ty = na.y + dy * tTail;
+        const fade = t > 0.82 ? Math.max(0, 1 - (t - 0.82) / 0.18) : 1;
+        const grad = ctx.createLinearGradient(tx, ty, hx, hy);
+        grad.addColorStop(0, mag(0));
+        grad.addColorStop(1, mag(0.95 * fade));
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(hx, hy);
+        ctx.stroke();
+        ctx.fillStyle = mag(0.95 * fade);
+        ctx.beginPath();
+        ctx.arc(hx, hy, 2.4 * fade + 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        return true;
+      });
+    }
+
+    function tick(now: number) {
+      if (!visible) { rafId = 0; return; }
+      if (now - lastFire > FIRE_MS) {
+        lastFire = now;
+        waveCounter++;
+        fire(Math.floor(Math.random() * nodes.length), now, -1, waveCounter);
+      }
+      draw(now);
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function start() {
+      if (rafId) return;
+      lastFire = performance.now();
+      rafId = requestAnimationFrame(tick);
+    }
+    function stop() {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+
+    resize();
+    let resizeT = 0;
+    addEventListener('resize', () => {
+      clearTimeout(resizeT);
+      resizeT = window.setTimeout(() => { stop(); resize(); if (visible && !reduced) start(); }, 120);
+    });
+
+    if (reduced) {
+      draw(performance.now());
+    } else {
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          visible = e.isIntersecting;
+          if (visible) start(); else stop();
+        }
+      }, { rootMargin: '50px' });
+      io.observe(canvas);
+    }
+  });
+</script>

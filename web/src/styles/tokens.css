@@ -1,0 +1,121 @@
+/* Dark technical design tokens. Cyan accent. */
+:root {
+  /* Surfaces */
+  --kel-bg:        #0a0e14;   /* page background */
+  --kel-bg-alt:    #11161f;   /* cards, raised surfaces */
+  --kel-bg-3:      #1a212e;   /* hover, secondary raise */
+  --kel-border:    #1f2937;   /* hairline */
+  --kel-border-2:  #2c3848;   /* emphasized */
+
+  /* Text */
+  --kel-text:    #e6edf5;
+  --kel-text-2:  #9aa6b8;
+  --kel-text-3:  #5b6679;
+
+  /* Brand */
+  --kel-accent:    #38bdf8;   /* cyan */
+  --kel-accent-2:  #0ea5e9;   /* deeper cyan for hover */
+  --kel-accent-soft: rgba(56, 189, 248, 0.14);
+  --kel-fiber:     #e879f9;   /* magenta — synaptic fibers in hero */
+
+  /* Status colors (kept consistent with Directus admin) */
+  --kel-success:   #10b981;
+  --kel-warn:      #f59e0b;
+  --kel-danger:    #f43f5e;
+
+  /* Typography */
+  --kel-font-sans: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont,
+                   'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --kel-font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'SF Mono',
+                   ui-monospace, Menlo, Consolas, monospace;
+  --kel-font-display: var(--kel-font-sans);
+
+  /* Layout */
+  --kel-gutter:    clamp(20px, 4vw, 48px);
+  --kel-max:       1180px;
+  --kel-radius:    8px;
+  --kel-radius-lg: 14px;
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--kel-bg);
+  color: var(--kel-text);
+  font-family: var(--kel-font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--kel-accent);
+  text-decoration: none;
+  transition: color .15s ease;
+}
+a:hover { color: var(--kel-accent-2); }
+
+::selection {
+  background: var(--kel-accent-soft);
+  color: var(--kel-text);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--kel-font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+code, kbd, pre, samp { font-family: var(--kel-font-mono); }
+
+/* Utility */
+.kel-container {
+  max-width: var(--kel-max);
+  margin: 0 auto;
+  padding: 0 var(--kel-gutter);
+}
+
+.kel-eyebrow {
+  font-family: var(--kel-font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--kel-accent);
+}
+
+.kel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 6px;
+  border: 1px solid var(--kel-border-2);
+  background: var(--kel-bg-alt);
+  color: var(--kel-text);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+.kel-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--kel-accent);
+  background: var(--kel-bg-3);
+}
+.kel-btn--primary {
+  background: var(--kel-accent);
+  border-color: var(--kel-accent);
+  color: #04111c;
+}
+.kel-btn--primary:hover {
+  background: var(--kel-accent-2);
+  border-color: var(--kel-accent-2);
+  color: #04111c;
+}
