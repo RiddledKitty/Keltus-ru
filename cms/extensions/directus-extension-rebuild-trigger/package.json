@@ -1,0 +1,17 @@
+{
+  "name": "directus-extension-rebuild-trigger",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "directus:extension": {
+    "type": "endpoint",
+    "path": "dist/index.js",
+    "source": "dist/index.js",
+    "host": "^11.0.0",
+    "sandbox": {
+      "enabled": false,
+      "requestedScopes": {}
+    }
+  }
+}

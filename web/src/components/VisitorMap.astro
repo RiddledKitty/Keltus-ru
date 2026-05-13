@@ -114,10 +114,17 @@ const PUBLIC_CMS_URL = import.meta.env.PUBLIC_CMS_URL || 'https://admin.keltus.r
 <script>
   type Point = { country: string; lat: number; lon: number; hits: number };
 
+  // Map is recentred on 90°E and shifted down by VERT_OFFSET so Russia
+  // (high latitude) lands near the vertical centre instead of the top.
+  // Both projections — the static SVG and these live dots — must match.
+  // See web/scripts/build-world-svg.mjs.
+  const CENTER_LON = 90;
+  const VERT_OFFSET = 80;
   function proj(lat: number, lon: number) {
+    const shifted = ((lon - CENTER_LON + 540) % 360) - 180;
     return {
-      x: ((lon + 180) / 360) * 1000,
-      y: ((90 - lat) / 180) * 500,
+      x: ((shifted + 180) / 360) * 1000,
+      y: ((90 - lat) / 180) * 500 + VERT_OFFSET,
     };
   }
 
@@ -201,6 +208,31 @@ const PUBLIC_CMS_URL = import.meta.env.PUBLIC_CMS_URL || 'https://admin.keltus.r
     // map reads as alive. Each one fades in, lives 6–10s, fades out, then
     // is replaced somewhere else.
     const FAKE_POOL: { city: string; country: string; lat: number; lon: number }[] = [
+      // Russian cities — dominant cluster (top 20 by population, spread geographically
+      // so the map reads as a dense Russia cluster).
+      { city: 'Москва',            country: 'RU', lat:  55.75, lon:   37.61 },
+      { city: 'Санкт-Петербург',   country: 'RU', lat:  59.93, lon:   30.31 },
+      { city: 'Новосибирск',       country: 'RU', lat:  55.03, lon:   82.93 },
+      { city: 'Екатеринбург',      country: 'RU', lat:  56.84, lon:   60.60 },
+      { city: 'Казань',            country: 'RU', lat:  55.79, lon:   49.12 },
+      { city: 'Нижний Новгород',   country: 'RU', lat:  56.32, lon:   44.00 },
+      { city: 'Челябинск',         country: 'RU', lat:  55.16, lon:   61.40 },
+      { city: 'Самара',            country: 'RU', lat:  53.20, lon:   50.15 },
+      { city: 'Омск',              country: 'RU', lat:  54.99, lon:   73.37 },
+      { city: 'Ростов-на-Дону',    country: 'RU', lat:  47.24, lon:   39.71 },
+      { city: 'Уфа',               country: 'RU', lat:  54.73, lon:   55.97 },
+      { city: 'Красноярск',        country: 'RU', lat:  56.01, lon:   92.86 },
+      { city: 'Воронеж',           country: 'RU', lat:  51.66, lon:   39.20 },
+      { city: 'Пермь',             country: 'RU', lat:  58.00, lon:   56.25 },
+      { city: 'Волгоград',         country: 'RU', lat:  48.72, lon:   44.51 },
+      { city: 'Краснодар',         country: 'RU', lat:  45.04, lon:   38.98 },
+      { city: 'Тюмень',            country: 'RU', lat:  57.16, lon:   65.53 },
+      { city: 'Калининград',       country: 'RU', lat:  54.71, lon:   20.45 },
+      { city: 'Иркутск',           country: 'RU', lat:  52.29, lon:  104.30 },
+      { city: 'Владивосток',       country: 'RU', lat:  43.12, lon:  131.89 },
+
+      // International reference cities — sparse coverage of every continent
+      // so the map doesn't look Russia-only.
       { city: 'New York',     country: 'US', lat:  40.7, lon:  -74.0 },
       { city: 'London',       country: 'UK', lat:  51.5, lon:   -0.1 },
       { city: 'Tokyo',        country: 'JP', lat:  35.7, lon:  139.7 },

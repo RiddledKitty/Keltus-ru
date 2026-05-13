@@ -1,8 +1,15 @@
 # ── Generated / cached ────────────────────────────────
 node_modules/
-dist/
 .astro/
 .cache/
+
+# Astro build output (root-anchored — does NOT catch
+# cms/extensions/**/dist/, which contains shipped runtime bundles).
+/web/dist/
+
+# Belt-and-braces: explicitly KEEP every extension dist directory in tree.
+!cms/extensions/**/dist/
+!cms/extensions/**/dist/**
 
 # ── Local & operational ───────────────────────────────
 .DS_Store
@@ -20,3 +27,12 @@ dist/
 .claude/
 .idea/
 .vscode/
+
+# ── Cruft at repo root that shouldn't ship ───────────
+/home/
+/images.zip
+/handoff.md
+/*.png
+
+# Allow PNG assets under web/public and cms/uploads.
+!web/public/**/*.png

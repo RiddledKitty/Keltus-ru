@@ -21,6 +21,11 @@ const featuredQuotes     = await listTestimonials({ featured: true });
 // and render it as a full-width hero card above the rest.
 const heroProject     = featuredProjects.find(p => p.slug === 'keltus-ru') ?? null;
 const gridProjects    = featuredProjects.filter(p => p.slug !== 'keltus-ru');
+
+// First featured team member gets the same hero-card treatment as the
+// keltus-ru project. The rest fall into the 4-column grid below.
+const heroMember      = featuredTeam[0] ?? null;
+const gridTeam        = featuredTeam.slice(1);
 ---
 
 <BaseLayout seo={{
@@ -216,18 +221,46 @@ const gridProjects    = featuredProjects.filter(p => p.slug !== 'keltus-ru');
         <h2>Команда.</h2>
         <a href="/team/" class="kel-section__more">Познакомиться со всеми →</a>
       </header>
-      <div class="kel-team-grid">
-        {featuredTeam.map(m => (
-          <a href={`/team/${m.slug}/`} class="kel-team-grid__card" aria-label={`${m.name} — ${m.role ?? ''}`.trim()}>
-            <Avatar name={m.name} photoId={m.photo} size={104} />
-            <div class="kel-team-grid__body">
-              <strong>{m.name}</strong>
-              <span class="kel-team-grid__role">{m.role}</span>
-              {m.location && <span class="kel-team-grid__loc">{m.location}</span>}
-            </div>
-          </a>
-        ))}
-      </div>
+
+      {heroMember && (
+        <a href={`/team/${heroMember.slug}/`} class="kel-teamhero" aria-label={`${heroMember.name} — ${heroMember.role ?? ''}`.trim()}>
+          <div class="kel-teamhero__copy">
+            <span class="kel-teamhero__eyebrow">Знакомьтесь с командой</span>
+            <h3 class="kel-teamhero__title">{heroMember.name}</h3>
+            {heroMember.role && <p class="kel-teamhero__role">{heroMember.role}</p>}
+            {heroMember.location && (
+              <p class="kel-teamhero__loc">
+                <span aria-hidden="true">📍</span> {heroMember.location}
+              </p>
+            )}
+            {heroMember.bio && <p class="kel-teamhero__bio">{heroMember.bio}</p>}
+            {(heroMember.socials?.length ?? 0) > 0 && (
+              <ul class="kel-teamhero__socials">
+                {heroMember.socials!.map(s => <li>{s.label}</li>)}
+              </ul>
+            )}
+            <span class="kel-teamhero__cta">Полная биография →</span>
+          </div>
+          <div class="kel-teamhero__media">
+            <Avatar name={heroMember.name} photoId={heroMember.photo} size={320} />
+          </div>
+        </a>
+      )}
+
+      {gridTeam.length > 0 && (
+        <div class="kel-team-grid">
+          {gridTeam.map(m => (
+            <a href={`/team/${m.slug}/`} class="kel-team-grid__card" aria-label={`${m.name} — ${m.role ?? ''}`.trim()}>
+              <Avatar name={m.name} photoId={m.photo} size={104} />
+              <div class="kel-team-grid__body">
+                <strong>{m.name}</strong>
+                <span class="kel-team-grid__role">{m.role}</span>
+                {m.location && <span class="kel-team-grid__loc">{m.location}</span>}
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
     </section>
   )}
 
@@ -497,6 +530,124 @@ const gridProjects    = featuredProjects.filter(p => p.slug !== 'keltus-ru');
     font-size: 14px;
     font-weight: 600;
     font-family: var(--kel-font-mono);
+  }
+
+  /* Team hero — full-width card for the first featured member, mirroring
+     the project hero pattern. Sits above the regular 4-column grid. */
+  .kel-teamhero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: clamp(20px, 4vw, 56px);
+    align-items: center;
+    padding: clamp(24px, 4vw, 40px);
+    margin-bottom: 24px;
+    border: 1px solid var(--kel-border);
+    border-radius: var(--kel-radius-lg);
+    background:
+      linear-gradient(135deg, rgba(56, 189, 248, 0.10) 0%, transparent 55%),
+      linear-gradient(225deg, rgba(232, 121, 249, 0.06) 0%, transparent 55%),
+      var(--kel-bg-alt);
+    color: var(--kel-text);
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .kel-teamhero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(60% 80% at 0% 100%, rgba(56, 189, 248, 0.10), transparent 70%);
+  }
+  .kel-teamhero:hover {
+    transform: translateY(-3px);
+    border-color: var(--kel-border-2);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+    color: var(--kel-text);
+  }
+  .kel-teamhero__copy { position: relative; }
+  .kel-teamhero__eyebrow {
+    display: inline-block;
+    font-family: var(--kel-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--kel-accent);
+    background: var(--kel-accent-soft);
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+  }
+  .kel-teamhero__title {
+    font-size: clamp(26px, 3.4vw, 36px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 6px;
+    line-height: 1.1;
+  }
+  .kel-teamhero__role {
+    margin: 0 0 8px;
+    color: var(--kel-accent);
+    font-family: var(--kel-font-mono);
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .kel-teamhero__loc {
+    margin: 0 0 14px;
+    color: var(--kel-text-3);
+    font-size: 13px;
+  }
+  .kel-teamhero__bio {
+    margin: 0 0 18px;
+    color: var(--kel-text-2);
+    font-size: clamp(15px, 1.4vw, 16.5px);
+    line-height: 1.6;
+    max-width: 56ch;
+  }
+  .kel-teamhero__socials {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .kel-teamhero__socials li {
+    font-family: var(--kel-font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--kel-text-2);
+    border: 1px solid var(--kel-border);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .kel-teamhero__cta {
+    display: inline-flex;
+    align-items: center;
+    color: var(--kel-accent);
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .kel-teamhero__media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  /* Hero Avatar is rendered at 320px — let it scale fluidly on smaller widths */
+  .kel-teamhero__media .kel-avatar {
+    width: min(320px, 100%) !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1;
+    transition: transform .4s ease;
+  }
+  .kel-teamhero:hover .kel-teamhero__media .kel-avatar { transform: scale(1.02); }
+  @media (max-width: 820px) {
+    .kel-teamhero { grid-template-columns: 1fr; }
+    .kel-teamhero__media { order: -1; }
+    .kel-teamhero__media .kel-avatar { width: min(220px, 60vw) !important; }
   }
 
   /* Team grid — 4 columns × 2 rows on desktop, small circle cards */
