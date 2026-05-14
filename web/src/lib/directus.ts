@@ -105,10 +105,10 @@ export interface SiteConfig {
   warn:         string | null;
   danger:       string | null;
   // Easter egg
-  konami_toast: string | null;
+  konami_image: string | null; // directus_files UUID
 }
 
-export type ThemeColorKey = Exclude<keyof SiteConfig, 'konami_toast'>;
+export type ThemeColorKey = Exclude<keyof SiteConfig, 'konami_image'>;
 
 /** Baked-in defaults — these MUST stay in lockstep with web/src/styles/tokens.css
  *  and with cms/scripts/setup-collections.mjs THEME_FIELDS. When a site_config

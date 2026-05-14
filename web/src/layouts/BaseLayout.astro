@@ -7,7 +7,7 @@ import Footer from '../components/Footer.astro';
 import RichLightbox from '../components/RichLightbox.astro';
 import Konami from '../components/Konami.astro';
 import AnalyticsBeacon from '../components/AnalyticsBeacon.astro';
-import { getSiteConfig, themeOverrideCss } from '../lib/directus';
+import { getSiteConfig, themeOverrideCss, assetUrl } from '../lib/directus';
 
 interface Props {
   seo?: {
@@ -27,7 +27,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://keltus.ru')
 // changes so the static HTML reflects edits within seconds.
 const siteConfig = await getSiteConfig();
 const themeCss   = themeOverrideCss(siteConfig);
-const konamiToast = siteConfig?.konami_toast || 'да, мы знаем — но синапсы всё равно лучше.';
+const konamiImage = siteConfig?.konami_image ? assetUrl(siteConfig.konami_image) : '/img/badvolf.png';
 ---
 
 <!doctype html>
@@ -77,7 +77,7 @@ const konamiToast = siteConfig?.konami_toast || 'да, мы знаем — но 
     </main>
     <Footer />
     <RichLightbox />
-    <Konami toast={konamiToast} />
+    <Konami image={konamiImage} />
     <AnalyticsBeacon />
   </body>
 </html>

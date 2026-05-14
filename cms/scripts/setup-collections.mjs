@@ -548,25 +548,31 @@ async function setupSiteConfig() {
     await patchSiteConfigMeta(f);
   }
 
-  // Easter-egg toast text — editable copy that flashes after the Konami
-  // code (↑↑↓↓←→←→BA). Stored on site_config so the operator can change
-  // it without touching code. Multi-line is allowed — paste ASCII art and
-  // it renders monospace and centered on screen.
-  const KONAMI_DEFAULT = 'да, мы знаем — но синапсы всё равно лучше.';
-  await ensureField('site_config', 'konami_toast', 'text',
+  // Easter-egg image — picker for the photo that appears framed in the
+  // center of the digital-rain effect after the Konami code
+  // (↑↑↓↓←→←→BA). Falls back to /img/badvolf.png when unset.
+  await ensureField('site_config', 'konami_image', 'uuid',
     { is_nullable: true },
-    { interface: 'input-multiline',
-      display: 'raw',
-      width: 'full',
-      options: { font: 'monospace' },
-      note: `Текст, мелькающий после ввода кода Konami (↑ ↑ ↓ ↓ ← → ← → B A). Многострочный текст допустим — вставьте ASCII-арт, и он отрисуется моноширинным и по центру. По умолчанию, если пусто: «${KONAMI_DEFAULT}»` });
+    { interface: 'file-image', special: ['file'], width: 'full',
+      note: `Изображение, появляющееся в рамке по центру эффекта «цифрового дождя» после кода Konami (↑ ↑ ↓ ↓ ← → ← → B A). Лучше круглый кроп. По умолчанию используется логотип BadVolf.` });
+  await ensureFileRelation('site_config', 'konami_image');
+
+  // Drop the old text field if it's still present from a prior install.
+  try {
+    await dx('DELETE', '/fields/site_config/konami_toast');
+    console.log('  · removed legacy konami_toast text field');
+  } catch (e) {
+    if (!/404|not found/i.test(e.message)) {
+      console.log(`  ! konami_toast cleanup: ${e.message.slice(0, 120)}`);
+    }
+  }
 
   // Build a single ordered list: each divider followed by its fields
   const order = [];
   for (const s of sectionOrder) {
     order.push(`div_${s}`);
     if (s === 'easter_egg') {
-      order.push('konami_toast');
+      order.push('konami_image');
     } else {
       order.push(...THEME_FIELDS.filter(f => f.section === s).map(f => f.key));
     }
@@ -583,7 +589,7 @@ async function setupSiteConfig() {
     for (const f of THEME_FIELDS) {
       if (!current[f.key]) patch[f.key] = f.default;
     }
-    if (!current.konami_toast) patch.konami_toast = KONAMI_DEFAULT;
+    // konami_image is left null by default — runtime falls back to /img/badvolf.png.
     if (Object.keys(patch).length > 0) {
       // Singleton endpoint expects { data: {...} } wrapper in Directus 11.
       await dx('PATCH', '/items/site_config', { data: patch });
